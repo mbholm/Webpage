@@ -81,6 +81,37 @@ Two mechanisms keep them current:
    DNS can take up to a few hours. When GitHub shows "DNS check successful", tick **Enforce HTTPS**.
 8. Remove the domain mapping from Google Sites so it no longer claims `martinbholm.com`.
 
+### DNS at GoDaddy (step 7 in detail)
+
+1. Log in at godaddy.com → click your name (top right) → **My Products**.
+2. Next to **martinbholm.com** click **DNS** (or the three dots → **Manage DNS**).
+   You land on the "DNS Records" table.
+3. Clean out what Google Sites left behind. Delete (pencil → trash icon) any of these if present:
+   - A records with name `@` pointing to Google addresses (`216.239.32.21`, `216.239.34.21`, `216.239.36.21`, `216.239.38.21`)
+     or to "Parked" / `WebsiteBuilder Site`.
+   - AAAA records with name `@`.
+   - The CNAME with name `www` pointing to `ghs.googlehosted.com` — *edit* this one rather than delete, see next step.
+   Leave everything else (MX, TXT, NS, `_domainconnect`, etc.) alone.
+4. Edit the `www` record (or **Add New Record** if there is none):
+   - Type: **CNAME**  · Name: `www`  · Value: `mbholm.github.io`  · TTL: 1 Hour → **Save**.
+   (If GoDaddy complains that a record already exists, delete the old `www` CNAME first, then add it.)
+5. Add four A records for the bare domain, one at a time (**Add New Record**):
+   - Type: **A** · Name: `@` · Value: `185.199.108.153` · TTL: 1 Hour
+   - Type: **A** · Name: `@` · Value: `185.199.109.153`
+   - Type: **A** · Name: `@` · Value: `185.199.110.153`
+   - Type: **A** · Name: `@` · Value: `185.199.111.153`
+6. Scroll down to **Forwarding** on the same page. If there is a domain forward set up (Google Sites often
+   adds one), delete it. GitHub itself redirects `martinbholm.com` → `www.martinbholm.com` once the A records are in place.
+7. Wait 10–60 minutes (GoDaddy is usually quick). Then in the GitHub repository → Settings → Pages,
+   click **Check again** next to the custom domain. When it says "DNS check successful", tick **Enforce HTTPS**.
+   The certificate can take a further few minutes to an hour to be issued.
+
+You can verify from any computer with:
+```
+nslookup www.martinbholm.com      # should answer mbholm.github.io + 185.199.x.x addresses
+nslookup martinbholm.com          # should list the four 185.199.x.x addresses
+```
+
 ### B. Publishing an update later
 
 1. Edit the files (e.g. add a paper to `research.html` and drop the PDF in `papers/`).
