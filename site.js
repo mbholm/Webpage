@@ -107,7 +107,9 @@ document.querySelectorAll('a[data-email]').forEach(function (a) {
             side = (authors ? authors.textContent.trim().replace(/\s+/g, ' ') + ' · ' : '') + monthYear(key);
           } else {
             var venue = a.querySelector('.venue');
-            side = (venue ? venue.textContent.trim() + ' · ' : '') + Math.floor(key / 100);
+            var metaEl = a.querySelector(':scope > .meta');
+            var forthcoming = metaEl && /forthcoming/i.test(metaEl.textContent);
+            side = (venue ? venue.textContent.trim() + ' · ' : '') + (forthcoming ? 'forthcoming' : Math.floor(key / 100));
           }
           return { key: key, el: li(href, title, side) };
         });

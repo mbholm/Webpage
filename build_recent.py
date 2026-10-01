@@ -62,7 +62,7 @@ def parse_paper(section: str, a: str):
     m = re.search(r"This version:\s*([A-Za-z]+\s+\d{4})", meta_text) or \
         re.search(r"First version:\s*([A-Za-z]+\s+\d{4})", meta_text)
     key = date_key(m.group(1) if m else meta_text)
-    return dict(href=href, title=title, key=key,
+    return dict(href=href, title=title, key=key, forthcoming="forthcoming" in meta_text.lower(),
                 authors=text(authors.group(1)) if authors else "",
                 venue=text(venue.group(1)) if venue else "")
 
@@ -98,7 +98,7 @@ def build():
             if kind == "papers":
                 side = (p["authors"] + " · " if p["authors"] else "") + month_year(p["key"])
             else:
-                side = (p["venue"] + " · " if p["venue"] else "") + str(p["key"] // 100)
+                side = (p["venue"] + " · " if p["venue"] else "") + ("forthcoming" if p["forthcoming"] else str(p["key"] // 100))
             items.append(li(p["href"], p["title"], side))
         replace_list(kind, items)
 

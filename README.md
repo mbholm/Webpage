@@ -15,7 +15,10 @@ style.css           All styling (light + dark mode, mobile, print)
 site.js             Builds the mailto link at runtime (anti-spam)
 assets/             portrait.jpg, favicon.svg
 papers/             All paper PDFs (working papers, appendices, slides, reports)
-files/              CV and conference program
+files/              CV (PDF) and conference program
+cv/                 Holm_CV.tex, the LaTeX master file for the CV
+build_cv.py         Compiles the CV and copies the PDF to files/Holm_CV.pdf
+build_recent.py     Regenerates the "Recent" lists on the home page
 CNAME               Custom domain for GitHub Pages
 .nojekyll           Tells GitHub Pages to serve files as-is
 ```
@@ -32,6 +35,24 @@ and point the title link at it. Extra links (appendix, slides, published version
 go as plain `<a>` chips inside an optional `<div class="links">`; leave that div out if there are none.
 
 Status badges for R&Rs use `<span class="status">R&amp;R</span>` inside the `.meta` line.
+
+### Updating the CV
+
+The CV has one source file: `cv/Holm_CV.tex`. Edit it, then run
+
+```
+python build_cv.py
+```
+
+This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, which is what the
+"Curriculum vitae" link in the sidebar opens. Commit both the `.tex` and the PDF.
+
+- Papers are in `papers` environments. The numbering continues automatically across Publications,
+  Publications in Norwegian, Revise & Resubmits and Working Papers, so moving an `\item` between
+  sections (e.g. when an R&R is accepted) renumbers everything by itself.
+- When a paper changes status on `research.html`, make the same change in the CV so the two stay in step.
+- A Teaching section is at the bottom of the file, commented out. Uncomment it for applications.
+- `cv/build/` (LaTeX by-products) and `cv/archive/` (the two pre-merge source files) are ignored by Git.
 
 ### Adding an op-ed
 

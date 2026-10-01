@@ -1,0 +1,15 @@
+# LaTeX build by-products for the CV (the published PDF lives in files/)
+cv/build/
+cv/*.aux
+cv/*.log
+cv/*.out
+cv/*.fls
+cv/*.fdb_latexmk
+cv/*.synctex.gz
+cv/*.pdf
+
+# The two pre-merge CV sources, kept locally for reference only
+cv/archive/
+
+# Python
+__pycache__/
