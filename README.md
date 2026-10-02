@@ -47,9 +47,11 @@ python build_cv.py
 This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, which is what the
 "Curriculum vitae" link in the sidebar opens. Commit both the `.tex` and the PDF.
 
-- Papers are in `papers` environments. The numbering continues automatically across Publications,
-  Publications in Norwegian, Revise & Resubmits and Working Papers, so moving an `\item` between
-  sections (e.g. when an R&R is accepted) renumbers everything by itself.
+- The whole CV is one two-column grid. A dated line is `\entry{2024--}{Text}`; a paper is
+  `\paper{2025}{Title}{\textit{Journal}}{A. Coauthor and B. Coauthor}`. Leave an argument empty
+  (`{}`) for no date, no venue or no coauthors. Grants use `\grant{years}{title}{details}`.
+- When a paper is accepted, move its `\paper` line to Publications and put the year (or
+  "Forthcoming") in the first argument.
 - When a paper changes status on `research.html`, make the same change in the CV so the two stay in step.
 - A Teaching section is at the bottom of the file, commented out. Uncomment it for applications.
 - `cv/build/` (LaTeX by-products) and `cv/archive/` (the two pre-merge source files) are ignored by Git.

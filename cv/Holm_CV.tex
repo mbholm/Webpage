@@ -8,290 +8,259 @@
 % Keep this file in step with research.html / reports.html / index.html:
 % when a paper changes status on the website, change it here too.
 %
-% ---------------------------------------------------------------------------
-% Based on the LaTeX Curriculum Vitae Template
-% Copyright (C) 2004-2009 Jason Blevins <jrblevin@sdf.lonestar.org>
-% http://jblevins.org/projects/cv-template/
+% Design: one two-column grid throughout. Dates and labels sit in a narrow
+% left column in grey; content sits in the right column. No numbering, no
+% bold, one thin rule per section.
 %
-% You may use use this document as a template to create your own CV
-% and you may redistribute the source code freely. No attribution is
-% required in any resulting documents. I do ask that you please leave
-% this notice and the above URL in the source code if you choose to
-% redistribute this file.
-% ---------------------------------------------------------------------------
+% To add an entry:
+%   \entry{2024--}{Text}                          a dated line
+%   \paper{2025}{Title}{\textit{Journal}}{A. Coauthor and B. Coauthor}
+% Leave the first argument empty for no date, and the third or fourth
+% argument empty if there is no venue or no coauthors.
 
-\documentclass[11pt,letterpaper,english]{article}
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{geometry}
-\usepackage{pxfonts}
+\usepackage{newpxtext}
+\usepackage[final]{microtype}
+\usepackage[a4paper,left=2.3cm,right=2.3cm,top=2.0cm,bottom=2.3cm]{geometry}
 \usepackage{xcolor}
-\usepackage{hyperref}
-
-\def\name{Martin B. Holm}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
 
 \hypersetup{
-  colorlinks  = true,
-  linkcolor   = black,
-  citecolor   = black,
-  urlcolor    = black,
-  pdfauthor   = {\name},
-  pdfkeywords = {economics},
-  pdftitle    = {\name: Curriculum Vitae},
-  pdfsubject  = {Curriculum Vitae},
-  pdfpagemode = UseNone
+  pdfauthor  = {Martin B. Holm},
+  pdftitle   = {Martin B. Holm: Curriculum Vitae},
+  pdfsubject = {Curriculum Vitae}
 }
 
-\geometry{
-  body = {6.5in, 8.5in},
-  left = 1.0in,
-  top  = 1.25in
-}
+\definecolor{muted}{gray}{0.40}
+\definecolor{hair}{gray}{0.72}
 
-% Page headers: name + page number from page 2 onwards
-\pagestyle{myheadings}
-\markright{\name}
-\thispagestyle{empty}
+\setlength{\parindent}{0pt}
+\newcommand{\sep}{\enspace\textperiodcentered\enspace}
+\newcommand{\cvdate}{\ifcase\month\or January\or February\or March\or April\or May\or June\or
+  July\or August\or September\or October\or November\or December\fi\ \the\year}
 
-\setlength\parindent{0em}
+% --- Footer: name on the left, page number on the right --------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\footnotesize\color{muted}Martin B. Holm\sep Curriculum vitae}
+\fancyfoot[R]{\footnotesize\color{muted}\thepage}
 
-% --- Section heading: bold title with a full-width rule underneath ---------
-% \cvneedspace starts a new page if less than the given height is left, so a
-% heading is never stranded at the bottom of a page without its content.
-\newcommand{\cvneedspace}[1]{\par\ifdim\pagetotal>0pt\begingroup
-  \dimen0=\pagegoal \advance\dimen0 by -\pagetotal
-  \ifdim\dimen0<#1\relax\endgroup\break\else\endgroup\fi\fi}
-% NOTE: the line breaks and blank lines inside \cvsection are significant for
-% the vertical spacing. Do not reformat it or add % at the line ends.
-\newcommand{\cvsection}[1]{\cvneedspace{7\baselineskip}
-\vspace{0.1in}
-\textbf{#1}\\
-\vspace{-0.35in}
+% --- Section headings: small caps over a hairline --------------------------
+\titleformat{\section}{\large\scshape}{}{0pt}{}[{\color{hair}\titlerule[0.4pt]}]
+\titlespacing*{\section}{0pt}{15pt plus 4pt minus 2pt}{7pt}
 
-\noindent\makebox[\linewidth]{\rule{0.77\paperwidth}{0.4pt}}
-\vspace{-0.25in}
+% --- The grid: label column on the left, content on the right --------------
+\newlist{cvlist}{itemize}{1}
+\setlist[cvlist]{label={}, labelwidth=2.4cm, labelsep=0.4cm, leftmargin=2.8cm,
+                 align=left, itemsep=2.5pt, parsep=0pt, topsep=0pt, partopsep=0pt,
+                 before=\raggedright}
 
-}
+\newcommand{\entry}[2]{\item[\color{muted}#1] #2}
 
-% --- Numbered list of papers; numbering continues across sections ----------
-% Just add or move \item lines: the numbers update by themselves.
-\newcounter{paper}
-\newenvironment{papers}
-  {\begin{enumerate}\setcounter{enumi}{\value{paper}}}
-  {\setcounter{paper}{\value{enumi}}\end{enumerate}}
+% \paper{date}{title}{venue}{coauthors}
+\makeatletter
+\newcommand{\paper}[4]{%
+  \item[\color{muted}#1] #2%
+  \def\cv@venue{#3}\def\cv@with{#4}%
+  \ifx\cv@venue\@empty
+    \ifx\cv@with\@empty\else\\*{\small\color{muted}with #4}\fi
+  \else
+    \\*{\small #3\ifx\cv@with\@empty\else{\color{muted}\sep with #4}\fi}%
+  \fi}
+\makeatother
+\newcommand{\papergap}{\setlength{\itemsep}{4.5pt}}
 
-% --- Plain block (no numbers); separate lines with \\ ---------------------
-\newenvironment{block}
-  {\begin{enumerate}\item[]}
-  {\end{enumerate}}
+% \grant{years}{title}{details}
+\newcommand{\grant}[3]{\item[\color{muted}#1] #2{\small\color{muted}\sep #3}}
 
 \begin{document}
 
-{\LARGE \textbf{\name}}
+% ===========================================================================
+{\fontsize{23}{27}\selectfont Martin B.~Holm}\hfill{\small\color{muted}Curriculum vitae\sep\cvdate}
 
-\vspace{0.25in}
+\vspace{7pt}
+{\small Department of Economics, University of Oslo\sep Moltke Moes vei 31, 0851 Oslo, Norway\\[1pt]
+\href{mailto:m.b.holm@econ.uio.no}{m.b.holm@econ.uio.no}\sep\href{https://www.martinbholm.com/}{www.martinbholm.com}}
 
-\begin{minipage}{0.6\linewidth}
-  University of Oslo \\
-  Department of Economics \\
-  Moltke Moes Vei 31 \\
-  0851 Oslo, Norway\\
-
-\end{minipage}
-\begin{minipage}{0.45\linewidth}
-  \begin{tabular}{r}
-    \href{mailto:m.b.holm@econ.uio.no}{m.b.holm@econ.uio.no} \\
-    \url{https://www.martinbholm.com/}
-  \end{tabular}
-\end{minipage}
+\vspace{2pt}
 
 % ===========================================================================
-\cvsection{Current Positions}
+\section{Positions}
 
-\begin{block}
-  2024 --: Associate Professor, Department of Economics, University of Oslo \\
-  2022 --: Adjunct Researcher, BI Norwegian Business School \\
-  2023 --: Guest Researcher, Norges Bank \\
-  \textit{Affiliation}: Research Affiliate, Centre for Economic Policy Research (CEPR)
-\end{block}
-
-% ===========================================================================
-\cvsection{Education}
-
-\begin{block}
-  2014--2018: Ph.D. in Economics, BI Norwegian Business School \\
-  2012--2014: Master in Economics, University of Oslo \\
-  2011--2012: M.Sc. in Economic History, London School of Economics \\
-  2008--2011: Bachelor in Mathematics and Economics, University of Oslo
-\end{block}
+\begin{cvlist}
+  \entry{2024--}{Associate Professor, Department of Economics, University of Oslo}
+  \entry{2023--}{Guest Researcher, Norges Bank}
+  \entry{2022--}{Adjunct Researcher, BI Norwegian Business School}
+  \entry{}{Research Affiliate, Centre for Economic Policy Research (CEPR)}
+  \vspace{5pt}
+  \entry{2019--2024}{Assistant Professor (tenure-track), Department of Economics, University of Oslo}
+  \entry{2018--2023}{Researcher, Statistics Norway (PI on NRC 294978)}
+  \entry{2016--2018}{Project Researcher, Norges Bank}
+  \entry{2013--2014}{Economist, Norges Bank}
+\end{cvlist}
 
 % ===========================================================================
-\cvsection{Past Employment}
+\section{Education}
 
-\begin{block}
-  2019--2024: Assistant Professor (tenure-track), Department of Economics, University of Oslo \\
-  2018--2023: Researcher, Statistics Norway (PI on NRC 294978) \\
-  2016--2018: Project Researcher, Norges Bank \\
-  2013--2014: Economist, Norges Bank
-\end{block}
-
-% ===========================================================================
-\cvsection{Publications}
-
-\begin{papers}
-  \item Fisher Dynamics, Monetary Policy, and Household Indebtedness \\
-        (with A. Fagereng, M. Gulbrandsen, and G. J. Natvik) \\
-        \textbf{Journal of Money, Credit and Banking}, forthcoming
-  \item K-Returns to Education (with A. Fagereng, L. Guiso, and L. Pistaferri) \\
-        \textbf{European Economic Review}, 2026
-  \item A Parsimonious Model of Idiosyncratic Income (with E. Crawley and H. Tretvoll) \\
-        \textbf{International Economic Review}, 2025
-  \item Asset-Price Redistribution \\
-        (with A. Fagereng, É. Gouin-Bonenfant, M. Gomez, B. Moll, and G. J. Natvik) \\
-        \textbf{Journal of Political Economy}, 2025
-  \item Identifying the Depreciation Rate of Durables from Marginal Spending Responses \\
-        (with J. Cao, C. Cui, V. Dinger, and S. Kang) \\
-        \textbf{Journal of Money, Credit and Banking}, 2025
-  \item The Effect of Capacity Constraints on the Slope of the Phillips Curve \\
-        (with L. O. Lerdalen and D. Vines) \\
-        \textbf{Oxford Economic Papers}, 2024
-  \item Monetary Transmission with Income Risk \\
-        \textbf{Scandinavian Journal of Economics}, 2023
-  \item The Transmission of Monetary Policy under the Microscope (with P. Paul and A. Tischbirek) \\
-        \textbf{Journal of Political Economy}, 2021
-  \item MPC Heterogeneity and Household Balance Sheets (with A. Fagereng and G. J. Natvik) \\
-        \textbf{American Economic Journal: Macroeconomics}, 2021
-  \item Liquidity Constraints and Precautionary Saving (with C. Carroll and M. Kimball) \\
-        \textbf{Journal of Economic Theory}, 2021
-  \item Housing Wealth in Norway, 1993--2015 (with A. Fagereng and K. Torstensen) \\
-        \textbf{Journal of Economic and Social Measurement}, 2020
-  \item Consumption with Liquidity Constraints: An Analytical Characterization \\
-        \textbf{Economics Letters}, 2018
-  \item Restrictions on Wave Equations for Passive Media (with S. Holm) \\
-        \textbf{Journal of the Acoustical Society of America}, 2017
-\end{papers}
+\begin{cvlist}
+  \entry{2014--2018}{Ph.D. in Economics, BI Norwegian Business School}
+  \entry{2012--2014}{Master in Economics, University of Oslo}
+  \entry{2011--2012}{M.Sc. in Economic History, London School of Economics}
+  \entry{2008--2011}{Bachelor in Mathematics and Economics, University of Oslo}
+\end{cvlist}
 
 % ===========================================================================
-\cvsection{Publications in Norwegian}
+\section{Publications}
 
-\begin{papers}
-  \item Lønnsandelen i industrien (with M. Jasinski) \\
-        \textbf{Samfunnsøkonomen}, forthcoming
-  \item Inflasjon: Tanker om de siste to årene (plenary lecture at Forskermøtet 2024) \\
-        \textbf{Samfunnsøkonomen}, 2024
-  \item Optimale handlingsregler \\
-        \textbf{Samfunnsøkonomen}, 2024
-  \item Effekten av inntektsusikkerhet på husholdningenes sparing i Norge etter finanskrisen \\
-        \textbf{Samfunnsøkonomen}, 2015
-\end{papers}
-
-% ===========================================================================
-\cvsection{Revise \& Resubmits}
-
-\begin{papers}
-  \item Saving Behavior Across the Wealth Distribution: The Importance of Capital Gains \\
-        (with A. Fagereng, B. Moll, and G. J. Natvik) \\
-        \textit{Revise \& Resubmit} at \textbf{Review of Economic Studies}
-  \item The Investment Channel of Monetary Policy: Evidence from Norway \\
-        (with J. Cao, T. Hegna, R. Juelsrud, T. König, and M. Riiser) \\
-        \textit{Revise \& Resubmit} at \textbf{Journal of Monetary Economics}
-  \item Monetary Transmission to Firm-level R\&D (with R. Datsenko) \\
-        \textit{Revise \& Resubmit} at \textbf{Journal of Monetary Economics}
-  \item Monetary Transmission to Prices: Disaggregated Evidence from Norway (with S. A. Seland) \\
-        \textit{Revise \& Resubmit} at \textbf{International Journal of Central Banking}
-\end{papers}
-
-% ===========================================================================
-\cvsection{Working Papers}
-
-\begin{papers}
-  \item The Power of Substitution: Short-run Electricity Demand Flexibility (with K. Holtsmark)
-  \item Local Permanent Fiscal Multipliers (with K. Heimdal and A. Kordt)
-  \item Tax News and Intertemporal Substitution (with R. Jamilov, M. Jasinski, and P. Nenov)
-  \item Saving after Retirement and Preferences for Residual Wealth (with G. Fella and T. M. Pugh)
-  \item There is no Forward Guidance Puzzle (with S. Ahn)
-\end{papers}
+\begin{cvlist}\papergap
+  \paper{Forthcoming}{Fisher Dynamics, Monetary Policy, and Household Indebtedness}
+        {\textit{Journal of Money, Credit and Banking}}{A.~Fagereng, M.~Gulbrandsen, and G.~J.~Natvik}
+  \paper{2026}{K-Returns to Education}
+        {\textit{European Economic Review}}{A.~Fagereng, L.~Guiso, and L.~Pistaferri}
+  \paper{2025}{A Parsimonious Model of Idiosyncratic Income}
+        {\textit{International Economic Review}}{E.~Crawley and H.~Tretvoll}
+  \paper{2025}{Asset-Price Redistribution}
+        {\textit{Journal of Political Economy}}{A.~Fagereng, É.~Gouin-Bonenfant, M.~Gomez, B.~Moll, and G.~J.~Natvik}
+  \paper{2025}{Identifying the Depreciation Rate of Durables from Marginal Spending Responses}
+        {\textit{Journal of Money, Credit and Banking}}{J.~Cao, C.~Cui, V.~Dinger, and S.~Kang}
+  \paper{2024}{The Effect of Capacity Constraints on the Slope of the Phillips Curve}
+        {\textit{Oxford Economic Papers}}{L.~O.~Lerdalen and D.~Vines}
+  \paper{2023}{Monetary Transmission with Income Risk}
+        {\textit{Scandinavian Journal of Economics}}{}
+  \paper{2021}{The Transmission of Monetary Policy under the Microscope}
+        {\textit{Journal of Political Economy}}{P.~Paul and A.~Tischbirek}
+  \paper{2021}{MPC Heterogeneity and Household Balance Sheets}
+        {\textit{American Economic Journal: Macroeconomics}}{A.~Fagereng and G.~J.~Natvik}
+  \paper{2021}{Liquidity Constraints and Precautionary Saving}
+        {\textit{Journal of Economic Theory}}{C.~Carroll and M.~Kimball}
+  \paper{2020}{Housing Wealth in Norway, 1993--2015}
+        {\textit{Journal of Economic and Social Measurement}}{A.~Fagereng and K.~Torstensen}
+  \paper{2018}{Consumption with Liquidity Constraints: An Analytical Characterization}
+        {\textit{Economics Letters}}{}
+  \paper{2017}{Restrictions on Wave Equations for Passive Media}
+        {\textit{Journal of the Acoustical Society of America}}{S.~Holm}
+\end{cvlist}
 
 % ===========================================================================
-\cvsection{Policy Reports}
+\section{Publications in Norwegian}
 
-\begin{block}
-  Svensk penningpolitik 2025 (with K. Kinnerud and R. Vestman) \\
-  \textbf{Report to the Swedish Riksdag}, 2025
-  \item[] Norges Bank Watch 2023 (with K. Martinsen) \\
-  \textbf{Centre for Monetary Economics, BI Norwegian Business School}, 2023
-  \item[] Norges Bank Watch 2022 (with K. Haugland and S. Zollner) \\
-  \textbf{Centre for Monetary Economics, BI Norwegian Business School}, 2022
-  \item[] Drivkrefter bak lav etterspørsel i økonomien \\
-  (with O. Berg, T. v. Brasch, Å. Cappelen, A. Raknerud, H. Tretvoll, and T. C. Vigtel) \\
-  \textbf{Statistics Norway Reports 2020/32}, 2020
-\end{block}
-
-% ===========================================================================
-\cvsection{External Grants}
-
-\begin{block}
-  2026--2031: Housing, Wealth, and Fertility (NRC 359901); \mbox{PI: M. B. Holm} \\
-  2026--2029: Dynastic Finance: Formation, Management and Taxation of Dynasties (NRC); \mbox{PI: A. Fagereng} \\
-  2023--2029: Machine Learning about the Economy (NRC 334487); participant \\
-  2021--2026: Inequality, Debt, and Crisis Management (NRC 316301); \mbox{PI: K. Storesletten} \\
-  2020--2025: Inequality in 3D (ERC Starting Grant); PI: A. Fagereng \\
-  2019--2024: The Effects of Education on Returns to Wealth (NRC 294978); PI: M. B. Holm \\
-  2019--2023: The Macroeconomics of Wealth Inequality (NRC 287720); PI: A. Fagereng
-\end{block}
+\begin{cvlist}\papergap
+  \paper{Forthcoming}{Lønnsandelen i industrien}
+        {\textit{Samfunnsøkonomen}}{M.~Jasinski}
+  \paper{2024}{Inflasjon: Tanker om de siste to årene}
+        {\textit{Samfunnsøkonomen}\sep plenary lecture at Forskermøtet 2024}{}
+  \paper{2024}{Optimale handlingsregler}
+        {\textit{Samfunnsøkonomen}}{}
+  \paper{2015}{Effekten av inntektsusikkerhet på husholdningenes sparing i Norge etter finanskrisen}
+        {\textit{Samfunnsøkonomen}}{}
+\end{cvlist}
 
 % ===========================================================================
-\cvsection{Ph.D. Students}
+\section{Revise \& Resubmits}
 
-\begin{block}
-  Former: \href{https://www.rdatsenko.com/}{Ruslana Datsenko} (first placement: Bank of England), \\
-  \phantom{Former: }\href{https://sites.google.com/view/havarstein}{Morten Håvarstein} (first placement: University of Chicago) \\
-  Current: Knut W. Heimdal, Marek Jasinski, Amund H. Kordt, Danail Vasilev, Simon Seland
-\end{block}
-
-% ===========================================================================
-\cvsection{Conference and Seminar Presentations}
-
-\begin{block}
-  2026: Banque de France, SED. \\
-  2025: Uppsala, Tilburg, Riksbanken, Norges Bank. \\
-  2024: PSE, NHH, NMBU, Princeton, Brown, Minnesota, U Penn. \\
-  2023: LBS, Lund, JEDC-Conference Gerzensee, Berlin (WATT Workshop), CUNEF. \\
-  2022: NBER SI (EFMM), NBER SI (AP), Sciences Po, Copenhagen, Bank of Canada, BLS, Bank of Colombia, EEA-ESEM, NorMac. \\
-  2021: UT Austin, Hamburg, Junior Finance and Macro Conference, Helsinki GSE. \\
-  2020: NBER SI (ME), Chicago, Columbia Business School. \\
-  2019: NBER SI (EFG), ASSA. \\
-  2018: NBER SI (EFMM), Lund, NorMac, Aarhus. \\
-  2017: NBER SI (EFACR), SED, EEA-ESEM, ESWM. \\
-  2016: PHF Workshop, IAAE, ESWM.
-\end{block}
+\begin{cvlist}\papergap
+  \paper{}{Saving Behavior Across the Wealth Distribution: The Importance of Capital Gains}
+        {\textit{Review of Economic Studies}}{A.~Fagereng, B.~Moll, and G.~J.~Natvik}
+  \paper{}{The Investment Channel of Monetary Policy: Evidence from Norway}
+        {\textit{Journal of Monetary Economics}}{J.~Cao, T.~Hegna, R.~Juelsrud, T.~König, and M.~Riiser}
+  \paper{}{Monetary Transmission to Firm-level R\&D}
+        {\textit{Journal of Monetary Economics}}{R.~Datsenko}
+  \paper{}{Monetary Transmission to Prices: Disaggregated Evidence from Norway}
+        {\textit{International Journal of Central Banking}}{S.~A.~Seland}
+\end{cvlist}
 
 % ===========================================================================
-\cvsection{Professional Activities}
+\section{Working Papers}
 
-\begin{block}
-  \textit{Refereeing}: American Economic Review, Journal of Political Economy, Econometrica, Review of Economic Studies, Quarterly Journal of Economics, Journal of the European Economic Association, Journal of Finance, AER:Insights, AEJ:Macroeconomics, AEJ:Policy, Review of Economics and Statistics, Economic Journal, International Economic Review, Journal of Public Economics, Journal of Economic Growth, Scandinavian Journal of Economics, Quantitative Economics, Economica, Review of Economics of the Household. \\
-  \\
-  Co-organizing the Nordic Junior Macro Seminar Series (with E. Öberg and J. Druedahl). \\
-  Organizing committee, Nordic Symposium in Macroeconomics (NORMAC), 2026.
-\end{block}
+\begin{cvlist}\papergap
+  \paper{}{The Power of Substitution: Short-run Electricity Demand Flexibility}{}{K.~Holtsmark}
+  \paper{}{Local Permanent Fiscal Multipliers}{}{K.~Heimdal and A.~Kordt}
+  \paper{}{Tax News and Intertemporal Substitution}{}{R.~Jamilov, M.~Jasinski, and P.~Nenov}
+  \paper{}{Saving after Retirement and Preferences for Residual Wealth}{}{G.~Fella and T.~M.~Pugh}
+  \paper{}{There is no Forward Guidance Puzzle}{}{S.~Ahn}
+\end{cvlist}
+
+% ===========================================================================
+\section{Policy Reports}
+
+\begin{cvlist}\papergap
+  \paper{2025}{Svensk penningpolitik 2025}
+        {Report to the Swedish Riksdag}{K.~Kinnerud and R.~Vestman}
+  \paper{2023}{Norges Bank Watch 2023}
+        {Centre for Monetary Economics, BI Norwegian Business School}{K.~Martinsen}
+  \paper{2022}{Norges Bank Watch 2022}
+        {Centre for Monetary Economics, BI Norwegian Business School}{K.~Haugland and S.~Zollner}
+  \paper{2020}{Drivkrefter bak lav etterspørsel i økonomien}
+        {Statistics Norway Reports 2020/32}{O.~Berg, T. v. Brasch, Å.~Cappelen, A.~Raknerud, H.~Tretvoll, and T.~C.~Vigtel}
+\end{cvlist}
+
+% ===========================================================================
+\section{External Grants}
+
+\begin{cvlist}
+  \grant{2026--2031}{Housing, Wealth, and Fertility}{NRC 359901\sep PI:~M.~B.~Holm}
+  \grant{2026--2029}{Dynastic Finance: Formation, Management and Taxation of Dynasties}{NRC\sep PI:~A.~Fagereng}
+  \grant{2023--2029}{Machine Learning about the Economy}{NRC 334487\sep participant}
+  \grant{2021--2026}{Inequality, Debt, and Crisis Management}{NRC 316301\sep PI:~K.~Storesletten}
+  \grant{2020--2025}{Inequality in 3D}{ERC Starting Grant\sep PI:~A.~Fagereng}
+  \grant{2019--2024}{The Effects of Education on Returns to Wealth}{NRC 294978\sep PI:~M.~B.~Holm}
+  \grant{2019--2023}{The Macroeconomics of Wealth Inequality}{NRC 287720\sep PI:~A.~Fagereng}
+\end{cvlist}
+
+% ===========================================================================
+\section{Ph.D.~Students}
+
+\begin{cvlist}
+  \entry{Former}{\href{https://www.rdatsenko.com/}{Ruslana Datsenko} {\small\color{muted}\sep first placement: Bank of England}}
+  \entry{}{\href{https://sites.google.com/view/havarstein}{Morten Håvarstein} {\small\color{muted}\sep first placement: University of Chicago}}
+  \entry{}{\href{https://sites.google.com/view/amundkordt/home}{Amund H.~Kordt} {\small\color{muted}\sep first placement: Housing Lab at Oslo Met / SØA}}
+  \vspace{3pt}
+  \entry{Current}{Knut W.~Heimdal, Marek Jasinski, Danail Vasilev, Simon Seland}
+\end{cvlist}
+
+% ===========================================================================
+\section{Conference and Seminar Presentations}
+
+\begin{cvlist}
+  \entry{2026}{Banque de France, SED}
+  \entry{2025}{Uppsala, Tilburg, Riksbanken, Norges Bank}
+  \entry{2024}{PSE, NHH, NMBU, Princeton, Brown, Minnesota, U Penn}
+  \entry{2023}{LBS, Lund, JEDC-Conference Gerzensee, Berlin (WATT Workshop), CUNEF}
+  \entry{2022}{NBER SI (EFMM), NBER SI (AP), Sciences Po, Copenhagen, Bank of Canada, BLS, Bank of Colombia, EEA-ESEM, NorMac}
+  \entry{2021}{UT Austin, Hamburg, Junior Finance and Macro Conference, Helsinki GSE}
+  \entry{2020}{NBER SI (ME), Chicago, Columbia Business School}
+  \entry{2019}{NBER SI (EFG), ASSA}
+  \entry{2018}{NBER SI (EFMM), Lund, NorMac, Aarhus}
+  \entry{2017}{NBER SI (EFACR), SED, EEA-ESEM, ESWM}
+  \entry{2016}{PHF Workshop, IAAE, ESWM}
+\end{cvlist}
+
+% ===========================================================================
+\section{Professional Activities}
+
+\begin{cvlist}
+  \entry{Refereeing}{American Economic Review, Journal of Political Economy, Econometrica, Review of Economic Studies, Quarterly Journal of Economics, Journal of the European Economic Association, Journal of Finance, AER:Insights, AEJ:Macroeconomics, AEJ:Policy, Review of Economics and Statistics, Economic Journal, International Economic Review, Journal of Public Economics, Journal of Economic Growth, Scandinavian Journal of Economics, Quantitative Economics, Economica, Review of Economics of the Household}
+  \vspace{3pt}
+  \entry{Organizing}{Nordic Junior Macro Seminar Series (with E.~Öberg and J.~Druedahl)}
+  \entry{}{Nordic Symposium in Macroeconomics (NORMAC), organizing committee, 2026}
+\end{cvlist}
 
 % ===========================================================================
 % OPTIONAL SECTION -- uncomment to include (e.g. for applications)
 % ===========================================================================
 
-%\cvsection{Teaching}
+%\section{Teaching}
 %
-%\begin{block}
-%  Macroeconomics 1 (Bachelor, ECON1310, 2019--2021) \\
-%  Monetary Policy (Master, ECON4325, 2018--2022) \\
-%  Macroeconomics (1st year PhD, ECON9300, 2021, 2022)
-%\end{block}
-
-% Footer
-%\begin{center}
-%  \begin{footnotesize}
-%    Last updated: \today
-%  \end{footnotesize}
-%\end{center}
+%\begin{cvlist}
+%  \entry{2021, 2022}{Macroeconomics (1st year PhD, ECON9300)}
+%  \entry{2018--2022}{Monetary Policy (Master, ECON4325)}
+%  \entry{2019--2021}{Macroeconomics 1 (Bachelor, ECON1310)}
+%\end{cvlist}
 
 \end{document}
