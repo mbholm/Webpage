@@ -13,6 +13,7 @@
   --accent-hover: #163b5e;
   --accent-soft: #e6eef6;
   --border: #e3e0d8;
+  --rule: #b8b4aa;
   --tag-bg: #f0eee8;
   --sidebar-w: 300px;
   --font-serif: "Newsreader", Georgia, "Times New Roman", serif;
@@ -30,6 +31,7 @@
     --accent-hover: #b3cee9;
     --accent-soft: #22303f;
     --border: #2b323b;
+    --rule: #4a535e;
     --tag-bg: #242b33;
   }
 }
@@ -55,7 +57,7 @@ a:hover { color: var(--accent-hover); text-decoration: underline; text-underline
 
 h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; line-height: 1.2; margin: 0; }
 h1 { font-size: 2.25rem; letter-spacing: -0.01em; }
-h2 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.01em; margin-top: 3.25rem; margin-bottom: 1rem; padding-bottom: .4rem; border-bottom: 2px solid var(--accent); }
+h2 { font-size: 1.6rem; font-weight: 600; margin-top: 3rem; margin-bottom: 1rem; padding-bottom: .4rem; border-bottom: 1px solid var(--rule); }
 h2:first-of-type { margin-top: 1.5rem; }
 h3 { font-size: 1.15rem; }
 
