@@ -15,7 +15,7 @@ Design
     single outage never blanks the whole dashboard.
   - The JSON holds data and source metadata only. Titles, explanations and chart layout live in
     dashboard.js, keyed by the same indicator ids.
-  - Derived series (TFP, labour productivity, current account in per cent of GDP, year-on-year
+  - Derived series (TFP, labor productivity, current account in percent of GDP, year-on-year
     changes) are computed here and marked "derived": true with a note on the formula.
 
 Series schema (inside each indicator's "series" object):
@@ -134,7 +134,7 @@ def nb_series(flow: str, key: str, split_by: str | None = None, **params) -> dic
         out[k] = ([p[i] for i in order], [v[i] for i in order])
     return out
 
-# --------------------------------------------------------------------------- small maths
+# --------------------------------------------------------------------------- small math
 
 def pct_change(values: list, lag: int) -> list:
     out = [None] * len(values)
@@ -185,11 +185,11 @@ def ind_gdp() -> dict:
     return {
         "series": {
             "level": S("GDP Mainland Norway, volume (constant 2023 prices, seasonally adjusted)", "NOK million", "Q", per, s[("bnpb.nr23_9fn", "FastePriserSesJust")], 0),
-            "qoq": S("GDP Mainland Norway, quarter-on-quarter volume growth (seasonally adjusted)", "per cent", "Q", per, s[("bnpb.nr23_9fn", "VolumEndrSesJust")], 1),
-            "yoy": S("GDP Mainland Norway, volume growth from same quarter a year earlier", "per cent", "Q", per, s[("bnpb.nr23_9fn", "Volum")], 1),
-            "total_qoq": S("GDP total, quarter-on-quarter volume growth (seasonally adjusted)", "per cent", "Q", per, s[("bnpb.nr23_9", "VolumEndrSesJust")], 1),
-            "annual": S("GDP Mainland Norway, annual volume growth", "per cent", "A", pa, sa[("bnpb.nr23_9fn", "Volum")], 1),
-            "annual_total": S("GDP total, annual volume growth", "per cent", "A", pa, sa[("bnpb.nr23_9", "Volum")], 1),
+            "qoq": S("GDP Mainland Norway, quarter-on-quarter volume growth (seasonally adjusted)", "percent", "Q", per, s[("bnpb.nr23_9fn", "VolumEndrSesJust")], 1),
+            "yoy": S("GDP Mainland Norway, volume growth from same quarter a year earlier", "percent", "Q", per, s[("bnpb.nr23_9fn", "Volum")], 1),
+            "total_qoq": S("GDP total, quarter-on-quarter volume growth (seasonally adjusted)", "percent", "Q", per, s[("bnpb.nr23_9", "VolumEndrSesJust")], 1),
+            "annual": S("GDP Mainland Norway, annual volume growth", "percent", "A", pa, sa[("bnpb.nr23_9fn", "Volum")], 1),
+            "annual_total": S("GDP total, annual volume growth", "percent", "A", pa, sa[("bnpb.nr23_9", "Volum")], 1),
             "nominal_sa": S("GDP Mainland Norway, current prices, seasonally adjusted", "NOK million", "Q", per, s[("bnpb.nr23_9fn", "PriserSesJust")], 0),
             "nominal_total_sa": S("GDP total, current prices, seasonally adjusted", "NOK million", "Q", per, s[("bnpb.nr23_9", "PriserSesJust")], 0),
             "nominal_annual": S("GDP Mainland Norway, current prices", "NOK million", "A", pa, sa[("bnpb.nr23_9fn", "Priser")], 0),
@@ -211,14 +211,14 @@ def ind_inflation(proj: dict | None = None, prev: dict | None = None) -> dict:
                "05": "Furnishings and household equipment", "07": "Transport", "08": "Information and communication",
                "09": "Recreation and culture", "11": "Restaurants and hotels"}
     series = {
-        "cpi_yoy": S("CPI, 12-month change", "per cent", "M", per, s[("00", "Tolvmanedersendring")], 1),
-        "cpiate_yoy": S("CPI-ATE (adjusted for tax changes, excluding energy), 12-month change", "per cent", "M", per2, s2[("KPI-JAE", "00", "Tolvmanedersendring")], 1),
-        "cpiat_yoy": S("CPI-AT (adjusted for tax changes), 12-month change", "per cent", "M", per2, s2[("KPI-JA", "00", "Tolvmanedersendring")], 1),
-        "cpi_mom": S("CPI, monthly change", "per cent", "M", per, s[("00", "Manedsendring")], 1),
+        "cpi_yoy": S("CPI, 12-month change", "percent", "M", per, s[("00", "Tolvmanedersendring")], 1),
+        "cpiate_yoy": S("CPI-ATE (adjusted for tax changes, excluding energy), 12-month change", "percent", "M", per2, s2[("KPI-JAE", "00", "Tolvmanedersendring")], 1),
+        "cpiat_yoy": S("CPI-AT (adjusted for tax changes), 12-month change", "percent", "M", per2, s2[("KPI-JA", "00", "Tolvmanedersendring")], 1),
+        "cpi_mom": S("CPI, monthly change", "percent", "M", per, s[("00", "Manedsendring")], 1),
         "cpi_index": S("CPI (2025=100)", "index", "M", per, s[("00", "KpiIndMnd")], 1),
     }
     for code, lab in labels3.items():
-        series["grp_" + code] = S(lab + ", 12-month change", "per cent", "M", per3, s3[("KPI", code, "Tolvmanedersendring")], 1)
+        series["grp_" + code] = S(lab + ", 12-month change", "percent", "M", per3, s3[("KPI", code, "Tolvmanedersendring")], 1)
     out = {"series": series,
            "sources": [src("Statistics Norway, consumer price index", "14700", "https://www.ssb.no/en/statbank/table/14700", m["updated"]),
                        src("Statistics Norway, CPI adjusted for tax changes and excluding energy products", "14704", "https://www.ssb.no/en/statbank/table/14704", m2["updated"])],
@@ -284,6 +284,14 @@ def nav_month_table(sheets: dict, title_contains: str) -> tuple[list[str], list[
     raise RuntimeError(f"NAV workbook has no sheet titled like '{title_contains}'")
 
 
+def nav_edition(text: str) -> str:
+    """NAV states the edition in Norwegian ("oktober 2026")."""
+    months = {"januar": "January", "februar": "February", "mars": "March", "april": "April", "mai": "May", "juni": "June", "juli": "July",
+              "august": "August", "september": "September", "oktober": "October", "november": "November", "desember": "December"}
+    word, _, rest = text.partition(" ")
+    return (months.get(word.lower(), word) + " " + rest).strip()
+
+
 def nav_registered() -> tuple[dict, dict]:
     """Registered unemployment from NAV's 'Hovedtall om arbeidsmarkedet' page (no API; monthly Excel files whose links change every month)."""
     page = "https://www.nav.no/no/nav-og-samfunn/statistikk/arbeidssokere-og-stillinger-statistikk/hovedtall-om-arbeidsmarkedet"
@@ -303,15 +311,15 @@ def nav_registered() -> tuple[dict, dict]:
     p_h, v_h = nav_month_table(hist, "Beholdning helt ledige som andel av arbeidsstyrken")
     edition = re.search(r"Statistikk per (\w+ \d{4})", html)
     series = {
-        "nav_unemployment": S("Registered unemployment, NAV (seasonally adjusted)", "per cent of labour force", "M", p_sa, v_sa, 1),
-        "nav_gross": S("Registered unemployment incl. labour market programmes, NAV (seasonally adjusted)", "per cent of labour force", "M", p_gr, v_gr, 1),
-        "nav_unemployment_nsa": S("Registered unemployment, NAV (not seasonally adjusted)", "per cent of labour force", "M", p_h, v_h, 1),
+        "nav_unemployment": S("Registered unemployment, NAV (seasonally adjusted)", "percent of labor force", "M", p_sa, v_sa, 1),
+        "nav_gross": S("Registered unemployment incl. labor market programs, NAV (seasonally adjusted)", "percent of labor force", "M", p_gr, v_gr, 1),
+        "nav_unemployment_nsa": S("Registered unemployment, NAV (not seasonally adjusted)", "percent of labor force", "M", p_h, v_h, 1),
         "nav_count": S("Registered fully unemployed, NAV (seasonally adjusted)", "persons", "M", p_n, v_n, 0),
     }
     source = src("NAV, Hovedtall om arbeidsmarkedet", None, page, None,
-                 ("Registered fully unemployed as a share of the labour force. The seasonally adjusted series start in 2011 (2017 for the gross measure). "
+                 ("Registered fully unemployed as a share of the labor force. The seasonally adjusted series start in 2011 (2017 for the gross measure). "
                   "Statistics for April to July 2025 are affected by NAV's change of job-seeker register."
-                  + (f" Edition: {edition.group(1)}." if edition else "")))
+                  + (f" Edition: {nav_edition(edition.group(1))}." if edition else "")))
     return series, source
 
 
@@ -353,21 +361,21 @@ def ind_unemployment() -> dict:
     q = lambda sex, age, c: sq[(sex, age, "S", c)]
     nav_series, nav_source = nav_registered()
     series = {
-        "unemployment": S("Unemployment rate, LFS, 15-74 years (seasonally adjusted, 3-month moving average)", "per cent of labour force", "M", per, g("0", "15-74", "ArbledProsArbstyrk"), 1),
+        "unemployment": S("Unemployment rate, LFS, 15-74 years (seasonally adjusted, 3-month moving average)", "percent of labor force", "M", per, g("0", "15-74", "ArbledProsArbstyrk"), 1),
         **nav_series,
-        "unemployment_men": S("Unemployment rate, LFS, men (seasonally adjusted, 3-month moving average)", "per cent of labour force", "M", per, g("1", "15-74", "ArbledProsArbstyrk"), 1),
-        "unemployment_women": S("Unemployment rate, LFS, women (seasonally adjusted, 3-month moving average)", "per cent of labour force", "M", per, g("2", "15-74", "ArbledProsArbstyrk"), 1),
-        "unemployment_15_24": S("Unemployment rate, LFS, 15-24 years (seasonally adjusted, 3-month moving average)", "per cent of labour force", "M", per, g("0", "15-24", "ArbledProsArbstyrk"), 1),
-        "unemployment_25_74": S("Unemployment rate, LFS, 25-74 years (seasonally adjusted, 3-month moving average)", "per cent of labour force", "M", per, g("0", "25-74", "ArbledProsArbstyrk"), 1),
+        "unemployment_men": S("Unemployment rate, LFS, men (seasonally adjusted, 3-month moving average)", "percent of labor force", "M", per, g("1", "15-74", "ArbledProsArbstyrk"), 1),
+        "unemployment_women": S("Unemployment rate, LFS, women (seasonally adjusted, 3-month moving average)", "percent of labor force", "M", per, g("2", "15-74", "ArbledProsArbstyrk"), 1),
+        "unemployment_15_24": S("Unemployment rate, LFS, 15-24 years (seasonally adjusted, 3-month moving average)", "percent of labor force", "M", per, g("0", "15-24", "ArbledProsArbstyrk"), 1),
+        "unemployment_25_74": S("Unemployment rate, LFS, 25-74 years (seasonally adjusted, 3-month moving average)", "percent of labor force", "M", per, g("0", "25-74", "ArbledProsArbstyrk"), 1),
         "unemployed": S("Unemployed persons, LFS (seasonally adjusted, 3-month moving average)", "1000 persons", "M", per, g("0", "15-74", "Arbeidsledige"), 0),
-        "q_unemployment_25_54": S("Unemployment rate, LFS, 25-54 years (quarterly, seasonally adjusted)", "per cent of labour force", "Q", perq, q("0", "25-54", "ArbledProsArbstyrk"), 1),
-        "q_unemployment_55_74": S("Unemployment rate, LFS, 55-74 years (quarterly, seasonally adjusted)", "per cent of labour force", "Q", perq, q("0", "55-74", "ArbledProsArbstyrk"), 1),
-        "q_unemployment_men_15_24": S("Unemployment rate, LFS, men 15-24 years (quarterly, seasonally adjusted)", "per cent of labour force", "Q", perq, q("1", "15-24", "ArbledProsArbstyrk"), 1),
-        "q_unemployment_women_15_24": S("Unemployment rate, LFS, women 15-24 years (quarterly, seasonally adjusted)", "per cent of labour force", "Q", perq, q("2", "15-24", "ArbledProsArbstyrk"), 1),
+        "q_unemployment_25_54": S("Unemployment rate, LFS, 25-54 years (quarterly, seasonally adjusted)", "percent of labor force", "Q", perq, q("0", "25-54", "ArbledProsArbstyrk"), 1),
+        "q_unemployment_55_74": S("Unemployment rate, LFS, 55-74 years (quarterly, seasonally adjusted)", "percent of labor force", "Q", perq, q("0", "55-74", "ArbledProsArbstyrk"), 1),
+        "q_unemployment_men_15_24": S("Unemployment rate, LFS, men 15-24 years (quarterly, seasonally adjusted)", "percent of labor force", "Q", perq, q("1", "15-24", "ArbledProsArbstyrk"), 1),
+        "q_unemployment_women_15_24": S("Unemployment rate, LFS, women 15-24 years (quarterly, seasonally adjusted)", "percent of labor force", "Q", perq, q("2", "15-24", "ArbledProsArbstyrk"), 1),
     }
     return {"series": series,
-            "sources": [src("Statistics Norway, Labour force survey, monthly", "13760", "https://www.ssb.no/en/statbank/table/13760", m["updated"], LFS_NOTE_M),
-                        src("Statistics Norway, Labour force survey, quarterly", "14483", "https://www.ssb.no/en/statbank/table/14483", mq["updated"]),
+            "sources": [src("Statistics Norway, Labor force survey, monthly", "13760", "https://www.ssb.no/en/statbank/table/13760", m["updated"], LFS_NOTE_M),
+                        src("Statistics Norway, Labor force survey, quarterly", "14483", "https://www.ssb.no/en/statbank/table/14483", mq["updated"]),
                         nav_source]}
 
 
@@ -377,24 +385,24 @@ def ind_employment() -> dict:
     g = lambda sex, age, c: s[(sex, age, "3MGG", c)]
     q = lambda sex, age, c: sq[(sex, age, "S", c)]
     series = {
-        "employment_rate": S("Employment rate, LFS, 15-74 years (seasonally adjusted, 3-month moving average)", "per cent of population", "M", per, g("0", "15-74", "SysselProsBefolkn"), 1),
-        "employment_rate_men": S("Employment rate, LFS, men 15-74 years (seasonally adjusted, 3-month moving average)", "per cent of population", "M", per, g("1", "15-74", "SysselProsBefolkn"), 1),
-        "employment_rate_women": S("Employment rate, LFS, women 15-74 years (seasonally adjusted, 3-month moving average)", "per cent of population", "M", per, g("2", "15-74", "SysselProsBefolkn"), 1),
-        "employment_rate_15_24": S("Employment rate, LFS, 15-24 years (seasonally adjusted, 3-month moving average)", "per cent of population", "M", per, g("0", "15-24", "SysselProsBefolkn"), 1),
-        "employment_rate_25_74": S("Employment rate, LFS, 25-74 years (seasonally adjusted, 3-month moving average)", "per cent of population", "M", per, g("0", "25-74", "SysselProsBefolkn"), 1),
-        "participation": S("Labour force participation, 15-74 years (seasonally adjusted, 3-month moving average)", "per cent of population", "M", per, g("0", "15-74", "ArbStyrkProsBefolkn"), 1),
+        "employment_rate": S("Employment rate, LFS, 15-74 years (seasonally adjusted, 3-month moving average)", "percent of population", "M", per, g("0", "15-74", "SysselProsBefolkn"), 1),
+        "employment_rate_men": S("Employment rate, LFS, men 15-74 years (seasonally adjusted, 3-month moving average)", "percent of population", "M", per, g("1", "15-74", "SysselProsBefolkn"), 1),
+        "employment_rate_women": S("Employment rate, LFS, women 15-74 years (seasonally adjusted, 3-month moving average)", "percent of population", "M", per, g("2", "15-74", "SysselProsBefolkn"), 1),
+        "employment_rate_15_24": S("Employment rate, LFS, 15-24 years (seasonally adjusted, 3-month moving average)", "percent of population", "M", per, g("0", "15-24", "SysselProsBefolkn"), 1),
+        "employment_rate_25_74": S("Employment rate, LFS, 25-74 years (seasonally adjusted, 3-month moving average)", "percent of population", "M", per, g("0", "25-74", "SysselProsBefolkn"), 1),
+        "participation": S("Labor force participation, 15-74 years (seasonally adjusted, 3-month moving average)", "percent of population", "M", per, g("0", "15-74", "ArbStyrkProsBefolkn"), 1),
         "employed": S("Employed persons, LFS, 15-74 years (seasonally adjusted, 3-month moving average)", "1000 persons", "M", per, g("0", "15-74", "Sysselsatte"), 0),
         "manweeks": S("Man-weeks worked of 37.5 hours (seasonally adjusted, 3-month moving average)", "1000 man-weeks", "M", per, g("0", "15-74", "Ukeverk"), 0),
     }
     ages = {"15-24": "15-24 years", "25-39": "25-39 years", "40-54": "40-54 years", "55-74": "55-74 years", "20-64": "20-64 years"}
     for code, lab in ages.items():
-        series["q_rate_" + code.replace("-", "_")] = S(f"Employment rate, LFS, {lab} (quarterly, seasonally adjusted)", "per cent of population", "Q", perq, q("0", code, "SysselProsBefolkn"), 1)
+        series["q_rate_" + code.replace("-", "_")] = S(f"Employment rate, LFS, {lab} (quarterly, seasonally adjusted)", "percent of population", "Q", perq, q("0", code, "SysselProsBefolkn"), 1)
     for sex, sl in (("1", "men"), ("2", "women")):
         for code in ("15-24", "25-54", "55-74"):
-            series[f"q_rate_{sl}_{code.replace('-', '_')}"] = S(f"Employment rate, LFS, {sl} {code} years (quarterly, seasonally adjusted)", "per cent of population", "Q", perq, q(sex, code, "SysselProsBefolkn"), 1)
+            series[f"q_rate_{sl}_{code.replace('-', '_')}"] = S(f"Employment rate, LFS, {sl} {code} years (quarterly, seasonally adjusted)", "percent of population", "Q", perq, q(sex, code, "SysselProsBefolkn"), 1)
     return {"series": series,
-            "sources": [src("Statistics Norway, Labour force survey, monthly", "13760", "https://www.ssb.no/en/statbank/table/13760", m["updated"], LFS_NOTE_M),
-                        src("Statistics Norway, Labour force survey, quarterly", "14483", "https://www.ssb.no/en/statbank/table/14483", mq["updated"])]}
+            "sources": [src("Statistics Norway, Labor force survey, monthly", "13760", "https://www.ssb.no/en/statbank/table/13760", m["updated"], LFS_NOTE_M),
+                        src("Statistics Norway, Labor force survey, quarterly", "14483", "https://www.ssb.no/en/statbank/table/14483", mq["updated"])]}
 
 
 # --------------------------------------------------------------------------- Norges Bank projections (Monetary Policy Report)
@@ -443,8 +451,8 @@ def nb_projections() -> dict:
             v = r.get(c)
             if isinstance(v, float):
                 data[name][qk] = v
-    pub = re.search(r"(\d{1,2} (?:%s) \d{4})" % MONTHS_EN, rhtml)
-    return {"report": f"{n}/{year}", "url": page, "published": pub.group(1) if pub else None,
+    pub = re.search(r"(\d{1,2}) (%s) (\d{4})" % MONTHS_EN, rhtml)
+    return {"report": f"{n}/{year}", "url": page, "published": f"{pub.group(2)} {pub.group(1)}, {pub.group(3)}" if pub else None,
             "first": (year, n), "anchor": (year, n - 1) if n > 1 else (year - 1, 4), "data": data}
 
 
@@ -452,7 +460,7 @@ def proj_series(proj: dict, name: str, label: str, decimals: int) -> dict:
     """Quarterly projection as a monthly-frequency series (each quarter at its middle month) so it can overlay the monthly charts."""
     mid = {1: "02", 2: "05", 3: "08", 4: "11"}
     pts = sorted((k, v) for k, v in proj["data"][name].items() if k >= proj["anchor"])
-    return S(f"{label}, Norges Bank projection (MPR {proj['report']})", "per cent", "M",
+    return S(f"{label}, Norges Bank projection (MPR {proj['report']})", "percent", "M",
              [f"{y}-{mid[q]}" for (y, q), _ in pts], [round(v, decimals) for _, v in pts], decimals, projection=True,
              note=f"Quarterly projections from Monetary Policy Report {proj['report']}, from the quarter of publication onwards. The first point is the preceding quarter. Each quarter is plotted at its middle month.")
 
@@ -482,13 +490,13 @@ def ind_rates(proj: dict | None = None, prev: dict | None = None) -> dict:
     ann = nb_csv("ANN_KPRA", "KPRA", startPeriod="2000-01-01")
     decisions = [{"date": r["TIME_PERIOD"], "rate": float(r["OBS_VALUE"]), "change": float(r["DELTA_VALUE"] or 0)} for r in ann if r.get("OBS_VALUE")]
     out = {"series": {
-                "policy_rate": S("Policy rate (sight deposit rate), monthly average", "per cent", "M", *pol_m, 2),
-                "policy_rate_daily": S("Policy rate (sight deposit rate), daily", "per cent", "D", *pol_d, 2),
-                "nowa": S("NOWA overnight rate, monthly average", "per cent", "M", *nowa_m, 2),
-                "gov10y": S("10-year government bond yield, monthly average", "per cent", "M", *y10_m, 2),
-                "gov10y_daily": S("10-year government bond yield, daily", "per cent", "D", *y10_d, 2),
-                "gov3y": S("3-year government bond yield, monthly average", "per cent", "M", *y3_m, 2),
-                "tbill3m": S("3-month treasury bill yield, monthly average", "per cent", "M", *tb3_m, 2)},
+                "policy_rate": S("Policy rate (sight deposit rate), monthly average", "percent", "M", *pol_m, 2),
+                "policy_rate_daily": S("Policy rate (sight deposit rate), daily", "percent", "D", *pol_d, 2),
+                "nowa": S("NOWA overnight rate, monthly average", "percent", "M", *nowa_m, 2),
+                "gov10y": S("10-year government bond yield, monthly average", "percent", "M", *y10_m, 2),
+                "gov10y_daily": S("10-year government bond yield, daily", "percent", "D", *y10_d, 2),
+                "gov3y": S("3-year government bond yield, monthly average", "percent", "M", *y3_m, 2),
+                "tbill3m": S("3-month treasury bill yield, monthly average", "percent", "M", *tb3_m, 2)},
             "decisions": decisions[-40:],
             "sources": [src("Norges Bank, policy rate", "IR", "https://data.norges-bank.no/", None),
                         src("Norges Bank, NOWA", "SHORT_RATES"), src("Norges Bank, generic government yields", "GOVT_GENERIC_RATES"),
@@ -544,7 +552,7 @@ def ind_current_account(gdp: dict | None) -> dict:
         gdp4 = rolling_sum([lookup.get(p) for p in per], 4)
         ca4 = series["balance_4q"]["values"]
         pct = [None if (a is None or b in (None, 0)) else round(a / b * 100, 1) for a, b in zip(ca4, gdp4)]
-        series["pct_gdp"] = S("Current account balance, per cent of GDP (four-quarter sums)", "per cent of GDP", "Q", per, pct, 1, derived=True,
+        series["pct_gdp"] = S("Current account balance, percent of GDP (four-quarter sums)", "percent of GDP", "Q", per, pct, 1, derived=True,
                               note="Four-quarter sum of the current account divided by the four-quarter sum of nominal GDP (table 09190, seasonally adjusted).")
     return {"series": series,
             "sources": [src("Statistics Norway, balance of payments", "09672", "https://www.ssb.no/en/statbank/table/09672", m["updated"])]}
@@ -591,7 +599,7 @@ def ind_oil_fund(gdp: dict | None) -> dict:
         ng = gdp["series"]["nominal_annual_total"]
         lookup = dict(zip(ng["periods"], ng["values"]))
         ratio = [None if (v is None or not lookup.get(y)) else round(v * 1000 / lookup[y] * 100, 0) for y, v in zip(years, total)]
-        series["pct_gdp"] = S("Market value in per cent of GDP", "per cent of GDP", "A", years, ratio, 0, derived=True,
+        series["pct_gdp"] = S("Market value in percent of GDP", "percent of GDP", "A", years, ratio, 0, derived=True,
                               note="Year-end market value divided by nominal GDP for the same year (SSB table 09189).")
     value = dict(zip(years, total))
     cy, cv = [], []
@@ -621,14 +629,14 @@ def ind_oil_fund(gdp: dict | None) -> dict:
             v = NBIM_COSTS_REPORTED[y] / ((a + b) / 2) * 100
         sy.append(str(y))
         sv.append(round(v, 3))
-    series["cost_share"] = S("Management costs, share of the fund", "per cent of assets under management", "A", sy, sv, 3, derived=True,
+    series["cost_share"] = S("Management costs, share of the fund", "percent of assets under management", "A", sy, sv, 3, derived=True,
                              note=("1998–2017: NBIM's published cost ratio. 2018 onwards: reported costs divided by the average of the opening and "
                                    "closing market value, because NBIM states the ratio to two decimals only."))
     # Asset classes as shares of the fund
     for key, name in (("equity", "Equity"), ("fixed_income", "Fixed income"), ("real_estate", "Real estate"), ("renewables", "Renewable energy infrastructure")):
         if key in series:
             p, v = series[key]["periods"], series[key]["values"]
-            series["share_" + key] = S(f"{name}, share of the fund", "per cent of market value", "A", p,
+            series["share_" + key] = S(f"{name}, share of the fund", "percent of market value", "A", p,
                                        [None if (x is None or not value.get(y)) else round(100 * x / value[y], 1) for y, x in zip(p, v)], 1, derived=True)
     return {"series": series,
             "sources": [src("Norges Bank Investment Management, the fund's value", None, url, None,
@@ -644,18 +652,18 @@ def ind_house_prices() -> dict:
     nsa = s[("TOTAL", "00", "Boligindeks")]
     series = {
         "index": S("House price index, whole country (2015=100, seasonally adjusted)", "index", "Q", per, idx, 1),
-        "yoy": S("House prices, change from same quarter a year earlier", "per cent", "Q", per, pct_change(nsa, 4), 1, derived=True),
-        "qoq": S("House prices, change from previous quarter (seasonally adjusted)", "per cent", "Q", per, pct_change(idx, 1), 1, derived=True),
+        "yoy": S("House prices, change from same quarter a year earlier", "percent", "Q", per, pct_change(nsa, 4), 1, derived=True),
+        "qoq": S("House prices, change from previous quarter (seasonally adjusted)", "percent", "Q", per, pct_change(idx, 1), 1, derived=True),
     }
     for code, lab in (("001", "Oslo incl. Bærum"), ("003", "Bergen"), ("004", "Trondheim"), ("002", "Stavanger")):
-        series["yoy_" + code] = S(lab + ", change from same quarter a year earlier", "per cent", "Q", per, pct_change(s[(code, "00", "Boligindeks")], 4), 1, derived=True)
+        series["yoy_" + code] = S(lab + ", change from same quarter a year earlier", "percent", "Q", per, pct_change(s[(code, "00", "Boligindeks")], 4), 1, derived=True)
     return {"series": series,
             "sources": [src("Statistics Norway, price index for existing dwellings", "07221", "https://www.ssb.no/en/statbank/table/07221", m["updated"])]}
 
 
 # --------------------------------------------------------------------------- national accounts income by industry (SSB 09170)
 
-NA_INDUSTRIES = {   # SSB code: (key, label). Gross and net labour shares are computed for each.
+NA_INDUSTRIES = {   # SSB code: (key, label). Gross and net labor shares are computed for each.
     "nr23ind": ("mfg", "Manufacturing"),
     "nr23_6fn": ("mainland", "Mainland Norway"),
     "nr23_6": ("total", "Total economy"),
@@ -680,8 +688,8 @@ def na_income():
     return _NA_INCOME
 
 
-def labour_shares(code: str, minus: str | None = None) -> tuple[list[str], list, list]:
-    """(years, gross share, net share) in per cent. Gross = W/(W+DEP+OS), net = W/(W+OS), as in Holm & Jasinski (Samfunnsøkonomen).
+def labor_shares(code: str, minus: str | None = None) -> tuple[list[str], list, list]:
+    """(years, gross share, net share) in percent. Gross = W/(W+DEP+OS), net = W/(W+OS), as in Holm & Jasinski (Samfunnsøkonomen).
     With `minus`, that industry is subtracted first (current-price income components are additive)."""
     years, s, _ = na_income()
     cols = []
@@ -732,35 +740,35 @@ def ind_wages() -> dict:
     et, es, eu = eurostat("lc_lci_lev", unit="EUR", lcstruct="D1_D4_MD5", nace_r2=["B-S_X_O", "C"], geo=list(EUROSTAT_GEOS), sinceTimePeriod="2008")
     ind_codes = {"A-S": "All industries", "C": "Manufacturing", "F": "Construction", "G": "Wholesale and retail trade", "H": "Transportation and storage",
                  "J": "Information and communication", "K": "Financial and insurance activities", "M": "Professional, scientific and technical activities",
-                 "O": "Public administration and defence", "P": "Education", "Q": "Human health and social work activities"}
+                 "O": "Public administration and defense", "P": "Education", "Q": "Human health and social work activities"}
     pi, si, mi = ssb_series(ssb_data("11417", [("NACE2007", list(ind_codes)), ("ContentsCode", ["Arslonn", "ArslonnEndring"]), ("Tid", ["from(2015)"])]))
     series = {
-        "wage_growth": S("Annual earnings, nominal growth", "per cent", "A", pa, sa[("ArslonnEndring",)], 1),
-        "real_wage_growth": S("Annual earnings, real growth (CPI-deflated)", "per cent", "A", pa, sa[("ReallonnEndring",)], 1),
+        "wage_growth": S("Annual earnings, nominal growth", "percent", "A", pa, sa[("ArslonnEndring",)], 1),
+        "real_wage_growth": S("Annual earnings, real growth (CPI-deflated)", "percent", "A", pa, sa[("ReallonnEndring",)], 1),
         "wage_level": S("Annual earnings, all employees", "NOK", "A", pa, sa[("Arslonn",)], 0),
     }
     for code, lab in ind_codes.items():
-        series["wg_" + code.replace("-", "")] = S(f"Annual earnings growth, {lab}", "per cent", "A", pi, si[(code, "ArslonnEndring")], 1)
-    # Hourly labour costs: compensation of employees per hour worked by employees (national accounts), NOK
+        series["wg_" + code.replace("-", "")] = S(f"Annual earnings growth, {lab}", "percent", "A", pi, si[(code, "ArslonnEndring")], 1)
+    # Hourly labor costs: compensation of employees per hour worked by employees (national accounts), NOK
     for code, lab, k in (("nr23_6fn", "Mainland Norway", "mainland"), ("nr23ind", "Manufacturing", "mfg")):
         W, H = sh[(code, "LKostnader")], sh[(code, "TimeverkL")]
-        series[f"lc_hour_{k}"] = S(f"Labour cost per hour worked, {lab}", "NOK", "A", ph, [None if (w is None or not h) else round(w / h, 0) for w, h in zip(W, H)], 0, derived=True,
+        series[f"lc_hour_{k}"] = S(f"Labor cost per hour worked, {lab}", "NOK", "A", ph, [None if (w is None or not h) else round(w / h, 0) for w, h in zip(W, H)], 0, derived=True,
                                    note="Compensation of employees divided by hours worked by employees, national accounts (SSB 09174).")
-        series[f"lc_hour_{k}_growth"] = S(f"Labour cost per hour worked, {lab}, growth", "per cent", "A", ph, sh[(code, "LKostTimeverkProsent")], 1)
-    # Eurostat labour cost levels, EUR per hour (the survey years 2008, 2012, 2016 and annual estimates from 2020)
+        series[f"lc_hour_{k}_growth"] = S(f"Labor cost per hour worked, {lab}, growth", "percent", "A", ph, sh[(code, "LKostTimeverkProsent")], 1)
+    # Eurostat labor cost levels, EUR per hour (the survey years 2008, 2012, 2016 and annual estimates from 2020)
     for geo, lab in EUROSTAT_GEOS.items():
-        series[f"lc_eur_{geo.lower()}"] = S(f"Hourly labour cost, {lab}, whole economy excl. public administration", "EUR per hour", "A", et, es[("A", "EUR", "D1_D4_MD5", "B-S_X_O", geo)], 1)
+        series[f"lc_eur_{geo.lower()}"] = S(f"Hourly labor cost, {lab}, whole economy excl. public administration", "EUR per hour", "A", et, es[("A", "EUR", "D1_D4_MD5", "B-S_X_O", geo)], 1)
     for geo in ("NO", "SE", "DK", "DE", "EU27_2020"):
-        series[f"lc_mfg_eur_{geo.lower()}"] = S(f"Hourly labour cost, {EUROSTAT_GEOS[geo]}, manufacturing", "EUR per hour", "A", et, es[("A", "EUR", "D1_D4_MD5", "C", geo)], 1)
+        series[f"lc_mfg_eur_{geo.lower()}"] = S(f"Hourly labor cost, {EUROSTAT_GEOS[geo]}, manufacturing", "EUR per hour", "A", et, es[("A", "EUR", "D1_D4_MD5", "C", geo)], 1)
     return {"series": series,
             "sources": [src("Statistics Norway, annual earnings, nominal and real", "14858", "https://www.ssb.no/en/statbank/table/14858", ma["updated"]),
                         src("Statistics Norway, annual earnings by industry", "11417", "https://www.ssb.no/en/statbank/table/11417", mi["updated"]),
                         src("Statistics Norway, wages, employment and productivity by industry", "09174", "https://www.ssb.no/en/statbank/table/09174", mh["updated"]),
-                        src("Eurostat, labour cost levels by NACE Rev. 2 activity", "lc_lci_lev", "https://ec.europa.eu/eurostat/databrowser/view/lc_lci_lev/default/table", eu,
-                            "Labour cost surveys every fourth year (2008, 2012, 2016) and annual estimates from 2020. Converted to euro at annual average exchange rates, so the krone's movements show up in Norway's level.")]}
+                        src("Eurostat, labor cost levels by NACE Rev. 2 activity", "lc_lci_lev", "https://ec.europa.eu/eurostat/databrowser/view/lc_lci_lev/default/table", eu,
+                            "Labor cost surveys every fourth year (2008, 2012, 2016) and annual estimates from 2020. Converted to euro at annual average exchange rates, so the krone's movements show up in Norway's level.")]}
 
 
-AVG_YEARS = 30   # the labour share chart draws each series' average over this many years (avgYears in dashboard.js)
+AVG_YEARS = 30   # the labor share chart draws each series' average over this many years (avgYears in dashboard.js)
 
 # The eleven manufacturing sectors at the A38 level, as in Holm and Jasinski, «Lønnsandelen i industrien»
 MFG_A38 = ["A38NP2X10_12", "A38NP2X13_15", "A38NP2X16_18", "A38NP2X19_21", "A38NP2X22_23", "A38NP2X24_25",
@@ -786,10 +794,10 @@ def _first_eigenvector(C: list[list[float]]) -> tuple[list[float], float]:
 
 
 def pc1_expanding(years: list[int], S: list[list[float]], GP: list[list[float]], minobs: int = 25, lag: int = 5) -> tuple[list, float | None]:
-    """Real-time common component (first principal component) of sectoral labour shares; a port of pc1_expanding.m from the
+    """Real-time common component (first principal component) of sectoral labor shares; a port of pc1_expanding.m from the
     replication package of Holm and Jasinski. For each year t everything is estimated on data up to t-lag: sector means and standard
     deviations, the PC1 loadings, and the weights (average share of total gross product). The loadings are applied to year t's
-    standardised shares and the component is expressed in per cent. Returns (component per year, variance explained in the last window)."""
+    standardized shares and the component is expressed in percent. Returns (component per year, variance explained in the last window)."""
     T, N = len(years), len(S[0])
     gp_share = [[g / sum(row) for g in row] for row in GP]
     out, explained = [None] * T, None
@@ -802,13 +810,13 @@ def pc1_expanding(years: list[int], S: list[list[float]], GP: list[list[float]],
         w = [sum(gp_share[i][j] for i in idx) / n for j in range(N)]
         mu = [sum(r[j] for r in Sw) / n for j in range(N)]
         sd = [math.sqrt(sum((r[j] - mu[j]) ** 2 for r in Sw) / (n - 1)) for j in range(N)]
-        Z = [[(r[j] - mu[j]) / sd[j] for j in range(N)] for r in Sw]          # standardised, so already centred
+        Z = [[(r[j] - mu[j]) / sd[j] for j in range(N)] for r in Sw]          # standardized, so already centered
         C = [[sum(z[a] * z[b] for z in Z) for b in range(N)] for a in range(N)]
         lam, top = _first_eigenvector(C)
         fw = [sum(z[j] * lam[j] for j in range(N)) for z in Z]                # the component in the window
         agg = [sum(r[j] * w[j] for j in range(N)) for r in Sw]                # the weighted aggregate in the window
         mf, ma = sum(fw) / n, sum(agg) / n
-        if sum((a - mf) * (b - ma) for a, b in zip(fw, agg)) < 0:             # orient towards the aggregate
+        if sum((a - mf) * (b - ma) for a, b in zip(fw, agg)) < 0:             # orient toward the aggregate
             lam = [-x for x in lam]
         zt = [(S[t][j] - mu[j]) / sd[j] for j in range(N)]
         ft = sum(zt[j] * lam[j] for j in range(N))
@@ -818,7 +826,7 @@ def pc1_expanding(years: list[int], S: list[list[float]], GP: list[list[float]],
 
 
 def mfg_common_component() -> dict:
-    """Aggregate (M0) and common-component labour shares for manufacturing, gross and net, as in figure 5 of the paper."""
+    """Aggregate (M0) and common-component labor shares for manufacturing, gross and net, as in figure 5 of the paper."""
     per, s, meta = ssb_series(ssb_data("09170", [("NACE", MFG_A38), ("ContentsCode", ["LOKO", "DEP", "DRI"]), ("Tid", ["from(1970)"])]))
     rows = []
     for i, y in enumerate(per):
@@ -835,32 +843,32 @@ def mfg_common_component() -> dict:
     for name, S_, tot in (("gross", Sg, tot_g), ("net", Sn, tot_n)):
         com, expl = pc1_expanding(years, S_, GP)
         ok = [i for i, c in enumerate(com) if c is not None]
-        shift = sum(tot[i] for i in ok) / len(ok) - sum(com[i] for i in ok) / len(ok)   # re-centre on the aggregate's mean over the same years
+        shift = sum(tot[i] for i in ok) / len(ok) - sum(com[i] for i in ok) / len(ok)   # re-center on the aggregate's mean over the same years
         out[name] = [None if c is None else round(c + shift, 1) for c in com]      # the paper's level (figure 5)
-        out[name + "_raw"] = com                                                    # before re-centring
+        out[name + "_raw"] = com                                                    # before re-centering
         out[name + "_total"] = [round(x, 1) for x in tot]
         out[name + "_explained"] = expl
     return out
 
 
-def ind_labour_shares() -> dict:
+def ind_labor_shares() -> dict:
     _, _, mn = na_income()
-    shares = [(k, lab, labour_shares(code)) for code, (k, lab) in NA_INDUSTRIES.items()]
-    shares.insert(2, ("business", "Mainland Norway excl. general government", labour_shares("nr23_6fn", minus=NA_GOVERNMENT)))
+    shares = [(k, lab, labor_shares(code)) for code, (k, lab) in NA_INDUSTRIES.items()]
+    shares.insert(2, ("business", "Mainland Norway excl. general government", labor_shares("nr23_6fn", minus=NA_GOVERNMENT)))
     cc = mfg_common_component()
-    cc_note = ("First principal component of the labour shares of the eleven A38 manufacturing sectors, computed in real time as in Holm and Jasinski: "
+    cc_note = ("First principal component of the labor shares of the eleven A38 manufacturing sectors, computed in real time as in Holm and Jasinski: "
                "for each year, sector means, standard deviations, loadings and value-added weights are estimated on data up to five years earlier "
-               f"(at least 25 years, so the series starts in 1999). The level of a principal component is a normalisation. Here it is set so that the component's "
-               f"average equals the average of the manufacturing labour share over the past {AVG_YEARS} years, the dashed line in the chart. "
-               "The paper centres it on the mean of the manufacturing share over the component's own years, which moves the whole line by a constant only.")
+               f"(at least 25 years, so the series starts in 1999). The level of a principal component is a normalization. Here it is set so that the component's "
+               f"average equals the average of the manufacturing labor share over the past {AVG_YEARS} years, the dashed line in the chart. "
+               "The papercenters it on the mean of the manufacturing share over the component's own years, which moves the whole line by a constant only.")
     series = {}
     for k, lab, (years, gross, net) in shares:
-        series[f"gross_{k}"] = S(f"Gross labour share, {lab}", "per cent", "A", years, gross, 1, derived=True)
+        series[f"gross_{k}"] = S(f"Gross labor share, {lab}", "percent", "A", years, gross, 1, derived=True)
     first = next(i for i, v in enumerate(cc["gross"]) if v is not None)      # the real-time component starts when the window is long enough
     cc = {k: (v[first:] if isinstance(v, list) else v) for k, v in cc.items()}
     mfg_years, mfg_gross, mfg_net = next(v for k, _, v in shares if k == "mfg")
 
-    def recentre(raw, ref_vals):
+    def recenter(raw, ref_vals):
         """Shift the component so that its mean equals the manufacturing share's average over the last AVG_YEARS years (the chart's dashed line)."""
         ref = [(y, v) for y, v in zip(mfg_years, ref_vals) if v is not None][-AVG_YEARS:]
         window = {y for y, _ in ref}
@@ -869,20 +877,20 @@ def ind_labour_shares() -> dict:
         shift = target - sum(inside) / len(inside)
         return [None if c is None else round(c + shift, 3) for c in raw]
 
-    series["gross_pc"] = S("Gross labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], recentre(cc["gross_raw"], mfg_gross), 1, derived=True, note=cc_note)
+    series["gross_pc"] = S("Gross labor share, manufacturing, common component across sectors", "percent", "A", cc["years"], recenter(cc["gross_raw"], mfg_gross), 1, derived=True, note=cc_note)
     for k, lab, (years, gross, net) in shares:
-        series[f"net_{k}"] = S(f"Net labour share, {lab}", "per cent", "A", years, net, 1, derived=True)
-    series["net_pc"] = S("Net labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], recentre(cc["net_raw"], mfg_net), 1, derived=True, note=cc_note)
+        series[f"net_{k}"] = S(f"Net labor share, {lab}", "percent", "A", years, net, 1, derived=True)
+    series["net_pc"] = S("Net labor share, manufacturing, common component across sectors", "percent", "A", cc["years"], recenter(cc["net_raw"], mfg_net), 1, derived=True, note=cc_note)
     return {"series": series,
-            "method": ("Labour shares are computed from the national accounts in current prices. Gross labour share = compensation of employees / "
-                       "(compensation of employees + consumption of fixed capital + net operating surplus). Net labour share = compensation of employees / "
+            "method": ("Labor shares are computed from the national accounts in current prices. Gross labor share = compensation of employees / "
+                       "(compensation of employees + consumption of fixed capital + net operating surplus). Net labor share = compensation of employees / "
                        "(compensation of employees + net operating surplus). Taxes and subsidies on production are excluded from the denominator, and income of the "
                        "self-employed is part of the operating surplus. For general government the operating surplus is essentially zero, so the mainland and "
                        "total-economy shares are pulled up by the public sector. The series excluding general government (Mainland Norway minus general government, "
                        "own aggregation) avoids this. The definitions follow Holm and Jasinski, «Lønnsandelen i industrien», Samfunnsøkonomen. "
-                       "The common component for manufacturing is the first principal component of the sectoral labour shares from the same paper, "
-                       f"computed in real time. In the latest estimation window it explains {cc['gross_explained']:.1f} per cent of the variance of the gross shares "
-                       f"and {cc['net_explained']:.1f} per cent of the net shares."),
+                       "The common component for manufacturing is the first principal component of the sectoral labor shares from the same paper, "
+                       f"computed in real time. In the latest estimation window it explains {cc['gross_explained']:.1f} percent of the variance of the gross shares "
+                       f"and {cc['net_explained']:.1f} percent of the net shares."),
             "sources": [src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", mn["updated"])]}
 
 
@@ -890,17 +898,17 @@ def ind_productivity() -> dict:
     py, sy, my = ssb_series(ssb_data("09189", [("Makrost", ["bnpb.nr23_6fn"]), ("ContentsCode", ["Faste"]), ("Tid", ["from(1970)"])]))
     pl, sl, ml = ssb_series(ssb_data("09174", [("NACE", ["nr23_6fn"]), ("ContentsCode", ["Timeverk"]), ("Tid", ["from(1970)"])]))
     pk, sk, mk = ssb_series(ssb_data("09181", [("NACE", ["nr23_6fn"]), ("ContentsCode", ["KAPN4"]), ("Tid", ["from(1970)"])]))
-    ys_, gross_share, _ = labour_shares("nr23_6fn")
+    ys_, gross_share, _ = labor_shares("nr23_6fn")
     _, _, mn = na_income()
     Y = dict(zip(py, sy[("bnpb.nr23_6fn", "Faste")]))
     L = dict(zip(pl, sl[("nr23_6fn", "Timeverk")]))
     K = dict(zip(pk, sk[("nr23_6fn", "KAPN4")]))
-    SH = {y: v / 100 for y, v in zip(ys_, gross_share) if v is not None}          # labour share, fraction
+    SH = {y: v / 100 for y, v in zip(ys_, gross_share) if v is not None}          # labor share, fraction
     years = [y for y in py if Y.get(y) and L.get(y) and K.get(y) and SH.get(y)]
     lp = [Y[y] / L[y] for y in years]                                   # value added per hour, NOK (2023 prices)
     kl = [K[y] / L[y] for y in years]
     # TFP in growth form (Törnqvist growth accounting): dlog A = dlog Y - (1-s)*dlog K - s*dlog L, where s is the average of the
-    # labour share in the two adjacent years (from the national accounts), then cumulated into a level index.
+    # labor share in the two adjacent years (from the national accounts), then cumulated into a level index.
     # Levels of chain-linked volumes are not comparable across tables, growth rates are.
     dlog_a = [None] * len(years)
     for i in range(1, len(years)):
@@ -924,27 +932,27 @@ def ind_productivity() -> dict:
     tfp_growth = [None if g is None else round((math.exp(g) - 1) * 100, 2) for g in dlog_a]
     base = "2000"
     series = {
-        "labour_productivity": S("Labour productivity, Mainland Norway: value added per hour worked (2000=100)", "index", "A", years, index_to(lp, years, base), 1, derived=True),
+        "labor_productivity": S("Labor productivity, Mainland Norway: value added per hour worked (2000=100)", "index", "A", years, index_to(lp, years, base), 1, derived=True),
         "tfp": S("Total factor productivity, Mainland Norway (2000=100)", "index", "A", years, index_to(tfp, years, base), 1, derived=True),
         "capital_per_hour": S("Capital per hour worked, Mainland Norway (2000=100)", "index", "A", years, index_to(kl, years, base), 1, derived=True),
-        "labour_productivity_growth": S("Labour productivity growth", "per cent", "A", years, pct_change(lp, 1), 1, derived=True),
-        "tfp_growth": S("TFP growth", "per cent", "A", years, tfp_growth, 1, derived=True),
-        "labour_share": S("Labour share used as weight, Mainland Norway (gross)", "per cent", "A", years, [round(SH[y] * 100, 1) for y in years], 1, derived=True,
+        "labor_productivity_growth": S("Labor productivity growth", "percent", "A", years, pct_change(lp, 1), 1, derived=True),
+        "tfp_growth": S("TFP growth", "percent", "A", years, tfp_growth, 1, derived=True),
+        "labor_share": S("Labor share used as weight, Mainland Norway (gross)", "percent", "A", years, [round(SH[y] * 100, 1) for y in years], 1, derived=True,
                           note="Compensation of employees / (compensation of employees + consumption of fixed capital + net operating surplus), SSB 09170."),
-        "output_growth": S("Value added growth, Mainland Norway (volume)", "per cent", "A", years, pct_change([Y[y] for y in years], 1), 1, derived=True),
-        "hours_growth": S("Hours worked growth, Mainland Norway", "per cent", "A", years, pct_change([L[y] for y in years], 1), 1, derived=True),
-        "capital_growth": S("Fixed capital growth, Mainland Norway (volume)", "per cent", "A", years, pct_change([K[y] for y in years], 1), 1, derived=True),
+        "output_growth": S("Value added growth, Mainland Norway (volume)", "percent", "A", years, pct_change([Y[y] for y in years], 1), 1, derived=True),
+        "hours_growth": S("Hours worked growth, Mainland Norway", "percent", "A", years, pct_change([L[y] for y in years], 1), 1, derived=True),
+        "capital_growth": S("Fixed capital growth, Mainland Norway (volume)", "percent", "A", years, pct_change([K[y] for y in years], 1), 1, derived=True),
         "value_added_per_hour": S("Value added per hour worked, Mainland Norway", "NOK, 2023 prices", "A", years, [round(v * 1e6 / 1e6, 0) for v in lp], 0, derived=True),
     }
     return {"series": series,
             "method": ("TFP is computed by growth accounting (Törnqvist index) from a Cobb-Douglas production function. Annual TFP growth is "
-                       "Δlog A = Δlog Y − (1 − s̄) Δlog K − s̄ Δlog L, where s̄ is the average of the labour share in the two adjacent years, and the TFP index is the "
-                       "cumulated growth rates rebased to 2000 = 100. The labour share is compensation of employees divided by compensation of employees plus "
+                       "Δlog A = Δlog Y − (1 − s̄) Δlog K − s̄ Δlog L, where s̄ is the average of the labor share in the two adjacent years, and the TFP index is the "
+                       "cumulated growth rates rebased to 2000 = 100. The labor share is compensation of employees divided by compensation of employees plus "
                        "consumption of fixed capital plus net operating surplus for Mainland Norway (SSB 09170, current prices). It is shown as a separate series. "
-                       f"Its mean over the sample is {sum(SH[y] for y in years) / len(years) * 100:.1f} per cent. "
+                       f"Its mean over the sample is {sum(SH[y] for y in years) / len(years) * 100:.1f} percent. "
                        "Y is gross value added in Mainland Norway at constant 2023 prices (SSB 09189), L is total hours worked in Mainland Norway (SSB 09174), "
-                       "K is the net stock of fixed capital in Mainland Norway at constant 2023 prices (SSB 09181). Labour productivity is Y/L. "
-                       "No adjustment is made for capacity utilisation, labour quality or self-employed income (which is part of the operating surplus)."),
+                       "K is the net stock of fixed capital in Mainland Norway at constant 2023 prices (SSB 09181). Labor productivity is Y/L. "
+                       "No adjustment is made for capacity utilization, labor quality or self-employed income (which is part of the operating surplus)."),
             "sources": [src("Statistics Norway, annual national accounts", "09189", "https://www.ssb.no/en/statbank/table/09189", my["updated"]),
                         src("Statistics Norway, employment and hours worked by industry", "09174", "https://www.ssb.no/en/statbank/table/09174", ml["updated"]),
                         src("Statistics Norway, fixed capital by industry", "09181", "https://www.ssb.no/en/statbank/table/09181", mk["updated"]),
@@ -971,10 +979,10 @@ BUDGET_LABELS = {   # table labels on regjeringen.no -> English
     "Øvrige sosiale formål": "Other social benefits",
     "Helsetjenester": "Health services under National Insurance",
     "Foreldrepenger mv.": "Parental benefit",
-    "Arbeidsliv": "Unemployment and labour market benefits",
+    "Arbeidsliv": "Unemployment and labor market benefits",
     "Rammetilskudd til kommuner og fylkeskommuner": "Block grants to municipalities and counties",
     "Regionale helseforetak": "Hospitals (regional health authorities)",
-    "Forsvar": "Defence",
+    "Forsvar": "Defense",
     "Samferdsel": "Transport",
     "Høyere utdanning, forskning og fagskoler": "Higher education and research",
     "Bistand": "Development aid",
@@ -1117,14 +1125,14 @@ def ind_budget() -> dict:
     f_bal = figure(r"^Oljekorrigert og strukturell oljekorrigert budsjettbalanse\. Prosent av trend-BNP")
     f_pub = figure(r"^Utgifter og skatte- og avgiftsinntekter i offentlig forvaltning\. Prosent av BNP for Fastlands-Norge")
     series = {
-        "deficit_gdp": S("Structural non-oil deficit", "per cent of trend GDP for Mainland Norway", "A", *column(f_gdp, r"^SOBU"), 1, note=est),
-        "oil_corrected_gdp": S("Oil-corrected deficit (not cyclically adjusted)", "per cent of trend GDP for Mainland Norway", "A", *column(f_bal, r"^Oljekorrigert budsjettbalanse", -1.0), 1),
+        "deficit_gdp": S("Structural non-oil deficit", "percent of trend GDP for Mainland Norway", "A", *column(f_gdp, r"^SOBU"), 1, note=est),
+        "oil_corrected_gdp": S("Oil-corrected deficit (not cyclically adjusted)", "percent of trend GDP for Mainland Norway", "A", *column(f_bal, r"^Oljekorrigert budsjettbalanse", -1.0), 1),
         "impulse": S("Change in the structural non-oil deficit (budget indicator)", "percentage points of trend GDP", "A", *column(f_imp, r"^Budsjettimpulser"), 1),
-        "fund_pct": S("Structural non-oil deficit as a share of the oil fund (fund spending)", "per cent of the fund", "A", *column(f_fund, r"^Uttaksprosent"), 1),
-        "expected_return": S("Expected real return on the fund (the fiscal rule)", "per cent of the fund", "A", *column(f_fund, r"^Forventet realavkastning"), 1),
-        "fund_share_budget": S("Fund spending as a share of state budget expenditure", "per cent of expenditure", "A", *column(f_share, r"^Bruk av fondsmidler"), 1),
-        "public_expenditure": S("General government expenditure", "per cent of GDP for Mainland Norway", "A", *column(f_pub, r"^Offentlige utgifter"), 1),
-        "tax_revenue": S("General government tax revenue", "per cent of GDP for Mainland Norway", "A", *column(f_pub, r"^Skatte- og avgiftsinntekter"), 1),
+        "fund_pct": S("Structural non-oil deficit as a share of the oil fund (fund spending)", "percent of the fund", "A", *column(f_fund, r"^Uttaksprosent"), 1),
+        "expected_return": S("Expected real return on the fund (the fiscal rule)", "percent of the fund", "A", *column(f_fund, r"^Forventet realavkastning"), 1),
+        "fund_share_budget": S("Fund spending as a share of state budget expenditure", "percent of expenditure", "A", *column(f_share, r"^Bruk av fondsmidler"), 1),
+        "public_expenditure": S("General government expenditure", "percent of GDP for Mainland Norway", "A", *column(f_pub, r"^Offentlige utgifter"), 1),
+        "tax_revenue": S("General government tax revenue", "percent of GDP for Mainland Norway", "A", *column(f_pub, r"^Skatte- og avgiftsinntekter"), 1),
     }
     return {"series": series, "breakdowns": breakdowns, "budget_year": year, "totals": totals,
             "sources": [src(f"Ministry of Finance, Nasjonalbudsjettet {year}, data behind the figures", None, fig_url, None, est),
@@ -1182,7 +1190,7 @@ def main() -> int:
     run("house_prices", ind_house_prices)
     run("productivity", ind_productivity)
     run("wages", ind_wages)
-    run("labour_shares", ind_labour_shares)
+    run("labor_shares", ind_labor_shares)
 
     OUT.parent.mkdir(exist_ok=True)
     payload = {"generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "errors": errors, "indicators": indicators}

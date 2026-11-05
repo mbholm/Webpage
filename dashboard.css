@@ -151,7 +151,7 @@ dialog.detail::backdrop { background: rgba(10, 14, 20, .45); backdrop-filter: bl
 
 .decisions { font-size: .82rem; border-collapse: collapse; margin-top: .25rem; }
 .decisions td { padding: .2rem .8rem .2rem 0; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
-.decisions td.chg.up { color: var(--down); }   /* a hike is shown warm, a cut cool: colours are secondary to the sign shown */
+.decisions td.chg.up { color: var(--down); }   /* a hike is shown warm, a cut cool: colors are secondary to the sign shown */
 .decisions td.chg.down { color: var(--up); }
 
 .d-loading, .d-error { padding: 2rem; color: var(--muted); }

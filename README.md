@@ -62,11 +62,11 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 
 A one-page dashboard of Norwegian macro indicators (GDP, inflation, unemployment, employment, interest
 rates, the krone, trade balance, current account, the oil fund, the government budget, house prices,
-productivity, wages and labour shares). Three files:
+productivity, wages and labor shares). Three files:
 
 - `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
-  (SDMX API), Eurostat (JSON API), NAV, NBIM and the Ministry of Finance, computes the derived series (TFP, labour productivity,
-  labour shares, ratios to GDP, growth rates) and writes `data/dashboard.json`. Each indicator is fetched
+  (SDMX API), Eurostat (JSON API), NAV, NBIM and the Ministry of Finance, computes the derived series (TFP, labor productivity,
+  labor shares, ratios to GDP, growth rates) and writes `data/dashboard.json`. Each indicator is fetched
   independently; if one source fails, that indicator keeps the previous data and the error is recorded
   in the JSON.
 - `dashboard.js` holds the display definitions (titles, descriptions, which series a tile shows, which
@@ -103,13 +103,13 @@ Sources without an API are read from the publisher's web page, so they break if 
   year** when the annual report comes out in late February. 1998–2010 are estimated from NBIM's cost
   ratio in basis points and are marked as approximate on the page.
 
-Method notes: TFP is computed in growth form (Törnqvist), weighting hours and capital by the labour
-share from the national accounts (table 09170), then cumulated into an index. Labour shares follow the
+Method notes: TFP is computed in growth form (Törnqvist), weighting hours and capital by the labor
+share from the national accounts (table 09170), then cumulated into an index. Labor shares follow the
 definitions in «Lønnsandelen i industrien»: gross = W/(W + capital consumption + operating surplus),
 net = W/(W + operating surplus). The common component for manufacturing is a port of
 `pc1_expanding.m` from the paper's replication package and reproduces its published key numbers. Its level
 is set so that its average equals the 30-year average of the manufacturing share (the dashed line),
-which differs from the paper's centring by a constant only.
+which differs from the paper's centering by a constant only.
 
 A tile can be linked directly: `dashboard.html#inflation` opens it, and
 `dashboard.html#oil_fund=costs` opens it with the named series switched on.
