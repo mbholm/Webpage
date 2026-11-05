@@ -53,33 +53,59 @@
     },
     {
       id: 'inflation', title: 'Inflation', kicker: 'Prices', goodUp: null,
-      desc: 'Twelve-month change in the consumer price index (CPI) and in CPI-ATE, the index adjusted for tax changes and excluding energy products that Norges Bank uses as its core measure. The inflation target is 2 per cent.',
+      desc: 'Twelve-month change in the consumer price index (CPI) and in CPI-ATE, the index adjusted for tax changes and excluding energy products that Norges Bank uses as its core measure. The inflation target is 2 per cent. Dashed lines are Norges Bank’s quarterly projections from the latest Monetary Policy Report.',
       headline: { series: 'cpi_yoy', fmt: (v) => fmt.pct(v), sub: 'CPI, 12-month change' },
       secondary: [{ series: 'cpiate_yoy', label: 'CPI-ATE', fmt: fmt.pct }],
       spark: 'cpi_yoy', sparkZero: true, target: 2,
       views: [{ s: 'cpi_yoy', short: 'CPI', kind: 'line', on: true }, { s: 'cpiate_yoy', short: 'CPI-ATE', kind: 'line', on: true }, { s: 'cpiat_yoy', short: 'CPI-AT', kind: 'line' },
-              { s: 'cpi_mom', short: 'CPI, m/m', kind: 'bar' }, { s: 'cpi_index', short: 'CPI index', kind: 'line' }],
+              { s: 'cpi_mom', short: 'CPI, m/m', kind: 'bar' }, { s: 'cpi_index', short: 'CPI index', kind: 'line' },
+              { s: 'proj_cpi', short: 'CPI, NB projection', kind: 'line', on: true, tint: 'cpi_yoy' }, { s: 'proj_cpiate', short: 'CPI-ATE, NB projection', kind: 'line', on: true, tint: 'cpiate_yoy' }],
       second: { title: 'Main CPI groups, 12-month change', series: ['grp_01', 'grp_04', 'grp_07', 'grp_11', 'grp_09', 'grp_03', 'grp_05', 'grp_08'] },
       defaultYears: 10,
     },
     {
-      id: 'labour', title: 'Unemployment', kicker: 'Labour market', goodUp: false,
-      desc: 'Unemployment rate from the Labour Force Survey (LFS), ages 15–74, seasonally adjusted three-month moving average dated by the middle month. Employment and participation rates are shares of the population.',
+      id: 'unemployment', title: 'Unemployment', kicker: 'Labour market', goodUp: false,
+      desc: 'Two measures of unemployment: the Labour Force Survey (LFS) rate for ages 15–74 (seasonally adjusted three-month moving average dated by the middle month) and NAV’s registered unemployment, i.e. people registered as fully unemployed as a share of the labour force. NAV’s gross measure adds participants in labour market programmes. Quarterly LFS series give finer breakdowns by age and sex.',
       headline: { series: 'unemployment', fmt: (v) => fmt.pct(v), sub: 'LFS unemployment rate, 3-month average' },
-      secondary: [{ series: 'employment_rate', label: 'employment rate', fmt: fmt.pct }],
+      secondary: [{ series: 'nav_unemployment', label: 'registered (NAV)', fmt: fmt.pct }],
       spark: 'unemployment',
-      views: [{ s: 'unemployment', short: 'Unemployment rate', kind: 'line', on: true }, { s: 'employment_rate', short: 'Employment rate', kind: 'line' }, { s: 'participation', short: 'Participation rate', kind: 'line' }],
+      views: [{ s: 'unemployment', short: 'LFS', kind: 'line', on: true, group: 'Monthly' }, { s: 'nav_unemployment', short: 'Registered (NAV)', kind: 'line', on: true, group: 'Monthly' },
+              { s: 'nav_gross', short: 'Registered incl. programmes', kind: 'line', group: 'Monthly' }, { s: 'nav_unemployment_nsa', short: 'Registered, unadjusted (1991–)', kind: 'line', group: 'Monthly' },
+              { s: 'nav_count', short: 'Registered, persons', kind: 'line', group: 'Monthly' }, { s: 'unemployed', short: 'LFS, persons', kind: 'line', group: 'Monthly' },
+              { s: 'unemployment_men', short: 'Men', kind: 'line', group: 'Monthly LFS by sex and age' }, { s: 'unemployment_women', short: 'Women', kind: 'line', group: 'Monthly LFS by sex and age' },
+              { s: 'unemployment_15_24', short: '15–24', kind: 'line', group: 'Monthly LFS by sex and age' }, { s: 'unemployment_25_74', short: '25–74', kind: 'line', group: 'Monthly LFS by sex and age' },
+              { s: 'q_unemployment_25_54', short: '25–54', kind: 'line', group: 'Quarterly LFS' }, { s: 'q_unemployment_55_74', short: '55–74', kind: 'line', group: 'Quarterly LFS' },
+              { s: 'q_unemployment_men_15_24', short: 'Men 15–24', kind: 'line', group: 'Quarterly LFS' }, { s: 'q_unemployment_women_15_24', short: 'Women 15–24', kind: 'line', group: 'Quarterly LFS' }],
+      defaultYears: 10,
+    },
+    {
+      id: 'employment', title: 'Employment', kicker: 'Labour market', goodUp: true,
+      desc: 'Employed persons as a share of the population, from the Labour Force Survey (LFS). Monthly series are seasonally adjusted three-month moving averages dated by the middle month; the quarterly series break the employment rate down by age group and sex. Participation is the labour force as a share of the population.',
+      headline: { series: 'employment_rate', fmt: (v) => fmt.pct(v), sub: 'employment rate, 15–74, 3-month average' },
+      secondary: [{ series: 'participation', label: 'participation', fmt: fmt.pct }],
+      spark: 'employment_rate',
+      views: [{ s: 'employment_rate', short: 'Employment rate', kind: 'line', on: true, group: 'Monthly' }, { s: 'participation', short: 'Participation rate', kind: 'line', group: 'Monthly' },
+              { s: 'employment_rate_men', short: 'Men', kind: 'line', group: 'Monthly' }, { s: 'employment_rate_women', short: 'Women', kind: 'line', group: 'Monthly' },
+              { s: 'employment_rate_15_24', short: '15–24', kind: 'line', group: 'Monthly' }, { s: 'employment_rate_25_74', short: '25–74', kind: 'line', group: 'Monthly' },
+              { s: 'employed', short: 'Employed, persons', kind: 'line', group: 'Monthly' }, { s: 'manweeks', short: 'Man-weeks worked', kind: 'line', group: 'Monthly' },
+              { s: 'q_rate_15_24', short: '15–24', kind: 'line', group: 'Quarterly, by age' }, { s: 'q_rate_25_39', short: '25–39', kind: 'line', group: 'Quarterly, by age' },
+              { s: 'q_rate_40_54', short: '40–54', kind: 'line', group: 'Quarterly, by age' }, { s: 'q_rate_55_74', short: '55–74', kind: 'line', group: 'Quarterly, by age' },
+              { s: 'q_rate_20_64', short: '20–64', kind: 'line', group: 'Quarterly, by age' },
+              { s: 'q_rate_men_15_24', short: 'Men 15–24', kind: 'line', group: 'Quarterly, by age and sex' }, { s: 'q_rate_women_15_24', short: 'Women 15–24', kind: 'line', group: 'Quarterly, by age and sex' },
+              { s: 'q_rate_men_25_54', short: 'Men 25–54', kind: 'line', group: 'Quarterly, by age and sex' }, { s: 'q_rate_women_25_54', short: 'Women 25–54', kind: 'line', group: 'Quarterly, by age and sex' },
+              { s: 'q_rate_men_55_74', short: 'Men 55–74', kind: 'line', group: 'Quarterly, by age and sex' }, { s: 'q_rate_women_55_74', short: 'Women 55–74', kind: 'line', group: 'Quarterly, by age and sex' }],
       defaultYears: 10,
     },
     {
       id: 'rates', title: 'Interest rates', kicker: 'Monetary policy', goodUp: null,
-      desc: 'Norges Bank’s policy rate (the sight deposit rate), the NOWA overnight money-market rate and generic government yields. Monthly averages give the long history; the daily series cover recent years and cannot be mixed with the monthly ones in the same chart.',
+      desc: 'Norges Bank’s policy rate (the sight deposit rate), the NOWA overnight money-market rate and generic government yields. Monthly averages give the long history; the daily series cover recent years and cannot be mixed with the monthly ones in the same chart. The dashed line is Norges Bank’s own policy rate forecast from the latest Monetary Policy Report.',
       headline: { series: 'policy_rate_daily', fmt: (v) => fmt.pct(v, 2), sub: 'policy rate' },
       secondary: [{ series: 'gov10y_daily', label: '10-year yield', fmt: (v) => fmt.pct(v, 2) }],
       spark: 'policy_rate',
       views: [{ s: 'policy_rate', short: 'Policy rate', kind: 'line', on: true }, { s: 'gov10y', short: '10-year yield', kind: 'line', on: true }, { s: 'gov3y', short: '3-year yield', kind: 'line' },
               { s: 'tbill3m', short: '3-month T-bill', kind: 'line' }, { s: 'nowa', short: 'NOWA', kind: 'line' },
-              { s: 'policy_rate_daily', short: 'Policy rate, daily', kind: 'line' }, { s: 'gov10y_daily', short: '10-year yield, daily', kind: 'line' }],
+              { s: 'policy_rate_daily', short: 'Policy rate, daily', kind: 'line' }, { s: 'gov10y_daily', short: '10-year yield, daily', kind: 'line' },
+              { s: 'proj_policy_rate', short: 'Policy rate, NB projection', kind: 'line', on: true, tint: 'policy_rate' }],
       decisions: true, defaultYears: 10,
     },
     {
@@ -114,12 +140,13 @@
     },
     {
       id: 'oil_fund', title: 'The oil fund', kicker: 'Government Pension Fund Global', goodUp: true,
-      desc: 'Market value of the Government Pension Fund Global at year-end, by asset class, as published by NBIM. The current year shows the latest value NBIM has published, not a year-end value.',
+      desc: 'Market value of the Government Pension Fund Global at year-end, by asset class, as published by NBIM. The current year shows the latest value NBIM has published, not a year-end value. Management costs are the annual costs of running the fund, in kroner.',
       headline: { series: 'value', fmt: (v) => fmt.trnFromBn(v), sub: 'market value', latestLabel: 'latest' },
       secondary: [{ series: 'pct_gdp', label: 'of GDP', fmt: (v) => fmt.pct(v, 0) }],
       spark: 'value', unitLabel: 'NOK bn',
       views: [{ s: 'value', short: 'Total', kind: 'line', on: true }, { s: 'equity', short: 'Equity', kind: 'line' }, { s: 'fixed_income', short: 'Fixed income', kind: 'line' }, { s: 'real_estate', short: 'Real estate', kind: 'line' },
-              { s: 'renewables', short: 'Renewable infrastructure', kind: 'line' }, { s: 'pct_gdp', short: '% of GDP', kind: 'bar' }],
+              { s: 'renewables', short: 'Renewable infrastructure', kind: 'line' }, { s: 'pct_gdp', short: '% of GDP', kind: 'bar' },
+              { s: 'costs', short: 'Management costs', kind: 'bar' }],
       defaultYears: 30,
     },
     {
@@ -134,13 +161,45 @@
     },
     {
       id: 'productivity', title: 'Productivity', kicker: 'Supply side', goodUp: true,
-      desc: 'Labour productivity (value added per hour worked) and total factor productivity in Mainland Norway, from the annual national accounts. TFP is the Solow residual of a Cobb-Douglas production function with a capital share of one third.',
+      desc: 'Labour productivity (value added per hour worked) and total factor productivity in Mainland Norway, from the annual national accounts. TFP growth is computed by growth accounting, weighting hours and capital by the labour share observed in the national accounts (average of adjacent years), and then cumulated into an index.',
       headline: { series: 'labour_productivity_growth', fmt: (v) => fmt.signedPct(v), sub: 'labour productivity growth' },
       secondary: [{ series: 'tfp_growth', label: 'TFP growth', fmt: fmt.signedPct }],
       spark: 'labour_productivity_growth', sparkZero: true,
       views: [{ s: 'labour_productivity', short: 'Labour productivity', kind: 'line', on: true }, { s: 'tfp', short: 'TFP', kind: 'line', on: true }, { s: 'capital_per_hour', short: 'Capital per hour', kind: 'line' },
               { s: 'labour_productivity_growth', short: 'Labour productivity growth', kind: 'bar' }, { s: 'tfp_growth', short: 'TFP growth', kind: 'bar' },
-              { s: 'output_growth', short: 'Value added growth', kind: 'line' }, { s: 'hours_growth', short: 'Hours growth', kind: 'line' }, { s: 'capital_growth', short: 'Capital growth', kind: 'line' }],
+              { s: 'output_growth', short: 'Value added growth', kind: 'line' }, { s: 'hours_growth', short: 'Hours growth', kind: 'line' }, { s: 'capital_growth', short: 'Capital growth', kind: 'line' },
+              { s: 'labour_share', short: 'Labour share (weight)', kind: 'line' }],
+      defaultYears: 30, showMethod: true,
+    },
+    {
+      id: 'wages', title: 'Wages', kicker: 'Labour costs', goodUp: null,
+      desc: 'Annual earnings growth for all employees, and labour costs per hour worked: in kroner from the national accounts, and in euro compared with other European countries from Eurostat. Eurostat’s figures are converted at annual average exchange rates, so Norway’s level moves with the krone.',
+      headline: { series: 'wage_growth', fmt: (v) => fmt.pct(v), sub: 'annual earnings growth' },
+      secondary: [{ series: 'real_wage_growth', label: 'real', fmt: fmt.signedPct }],
+      spark: 'wage_growth', sparkZero: true,
+      views: [{ s: 'wage_growth', short: 'Nominal growth', kind: 'line', on: true, group: 'Annual earnings' }, { s: 'real_wage_growth', short: 'Real growth', kind: 'line', on: true, group: 'Annual earnings' },
+              { s: 'wage_level', short: 'Level, NOK', kind: 'line', group: 'Annual earnings' },
+              ...[['AS', 'All industries'], ['C', 'Manufacturing'], ['F', 'Construction'], ['G', 'Trade'], ['H', 'Transport'], ['J', 'Information and communication'], ['K', 'Finance'],
+                  ['M', 'Professional services'], ['O', 'Public administration'], ['P', 'Education'], ['Q', 'Health and social work']]
+                .map(([k, t]) => ({ s: 'wg_' + k, short: t, kind: 'line', group: 'Earnings growth by industry (2017–)' })),
+              { s: 'lc_hour_mainland', short: 'Mainland Norway', kind: 'line', group: 'Labour cost per hour, NOK' }, { s: 'lc_hour_mfg', short: 'Manufacturing', kind: 'line', group: 'Labour cost per hour, NOK' },
+              { s: 'lc_hour_mainland_growth', short: 'Mainland, growth', kind: 'line', group: 'Labour cost per hour, NOK' }, { s: 'lc_hour_mfg_growth', short: 'Manufacturing, growth', kind: 'line', group: 'Labour cost per hour, NOK' },
+              ...[['no', 'Norway'], ['se', 'Sweden'], ['dk', 'Denmark'], ['fi', 'Finland'], ['de', 'Germany'], ['nl', 'Netherlands'], ['fr', 'France'], ['is', 'Iceland'], ['ea20', 'Euro area'], ['eu27_2020', 'EU']]
+                .map(([k, t]) => ({ s: 'lc_eur_' + k, short: t, kind: 'line', group: 'Labour cost per hour, EUR (Eurostat)' })),
+              ...[['no', 'Norway'], ['se', 'Sweden'], ['dk', 'Denmark'], ['de', 'Germany'], ['eu27_2020', 'EU']]
+                .map(([k, t]) => ({ s: 'lc_mfg_eur_' + k, short: t, kind: 'line', group: 'Manufacturing, EUR per hour (Eurostat)' }))],
+      defaultYears: 30,
+    },
+    {
+      id: 'labour_shares', title: 'Labour shares', kicker: 'Income distribution', goodUp: null,
+      desc: 'The share of factor income that goes to labour, by industry, computed from the annual national accounts. The gross labour share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus; the net labour share leaves capital consumption out of the denominator. The headline is Mainland Norway excluding general government.',
+      headline: { series: 'gross_business', fmt: (v) => fmt.pct(v), sub: 'gross labour share, mainland business sector' },
+      secondary: [{ series: 'net_business', label: 'net', fmt: fmt.pct }],
+      spark: 'gross_business',
+      views: ['gross', 'net'].flatMap((g) => [['business', 'Mainland excl. government'], ['mfg', 'Manufacturing'], ['mainland', 'Mainland Norway'], ['total', 'Total economy'], ['oilgas', 'Oil and gas'],
+                  ['construction', 'Construction'], ['trade', 'Trade'], ['transport', 'Transport'], ['accommodation', 'Accommodation and food'], ['ict', 'Information and communication'],
+                  ['finance', 'Finance'], ['professional', 'Professional services']]
+                .map(([k, t]) => ({ s: `${g}_${k}`, short: t, kind: 'line', on: k === 'business' || k === 'mfg', group: g === 'gross' ? 'Gross labour share' : 'Net labour share' }))),
       defaultYears: 30, showMethod: true,
     },
   ];
@@ -231,15 +290,17 @@
   dlg.addEventListener('close', () => { destroyCharts(); if (location.hash) history.replaceState(null, '', location.pathname + location.search); });
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
   window.addEventListener('hashchange', openFromHash);
-  function openFromHash() { const id = location.hash.replace('#', ''); if (id && DEFS.some((d) => d.id === id) && DATA) openDetail(id, true); }
+  // #id opens a tile; #id=seriesA,seriesB opens it with those series switched on
+  function openFromHash() { const [id, keys] = location.hash.replace('#', '').split('='); if (id && DEFS.some((d) => d.id === id) && DATA) openDetail(id, true, keys ? keys.split(',') : null); }
   function destroyCharts() { if (chart) { chart.destroy(); chart = null; } if (chart2) { chart2.destroy(); chart2 = null; } }
 
-  function openDetail(id, fromHash) {
+  function openDetail(id, fromHash, keys) {
     const def = DEFS.find((d) => d.id === id), ind = DATA.indicators[id];
     if (!def || !ind) return;
     destroyCharts();
     if (!fromHash) history.replaceState(null, '', '#' + id);
-    const on = new Set(def.views.filter((v) => v.on && ind.series[v.s]).map((v) => v.s));
+    const wanted = (keys || []).filter((k) => ind.series[k] && def.views.some((v) => v.s === k));
+    const on = new Set(wanted.length ? wanted : def.views.filter((v) => v.on && ind.series[v.s]).map((v) => v.s));
     state = { def, ind, on, years: def.defaultYears || 10, table: false };
     inner.innerHTML = buildDetailHtml(def, ind);
     inner.querySelector('.d-close').addEventListener('click', () => dlg.close());
@@ -257,14 +318,33 @@
 
   // Series of different frequencies cannot share one category axis: switching one on drops the others
   function toggleSeries(key) {
-    const freq = state.ind.series[key].freq;
+    const { freq, unit } = state.ind.series[key];
     if (state.on.has(key)) { if (state.on.size > 1) state.on.delete(key); }
-    else { for (const k of [...state.on]) if (state.ind.series[k].freq !== freq) state.on.delete(k); state.on.add(key); }
+    else {   // one axis: switching a series on drops those with another frequency or another unit
+      for (const k of [...state.on]) { const o = state.ind.series[k]; if (o.freq !== freq || o.unit !== unit) state.on.delete(k); }
+      state.on.add(key);
+    }
     syncPills(); drawChart();
   }
 
   const viewOf = (key) => state.def.views.find((v) => v.s === key);
   const viewLabel = (v, s) => v.short || (s ? s.label.split(/[,(]/)[0].trim() : v.s);
+  // Colour slot of a view; a projection (tint) borrows the colour of the series it extends
+  const slotOf = (def, v) => { const t = v.tint ? def.views.find((x) => x.s === v.tint) : null; return def.views.indexOf(t || v) % 8; };
+  // The palette has eight colours. Series that are switched on never share one: a clash moves the later series to the next free colour.
+  function assignSlots() {
+    const used = new Set(), map = new Map();
+    const active = state.def.views.filter((v) => state.on.has(v.s));
+    for (const v of active.filter((x) => !x.tint)) {
+      let slot = slotOf(state.def, v), n = 0;
+      while (used.has(slot) && n < 8) { slot = (slot + 1) % 8; n++; }
+      used.add(slot); map.set(v.s, slot);
+    }
+    for (const v of active.filter((x) => x.tint)) map.set(v.s, map.has(v.tint) ? map.get(v.tint) : slotOf(state.def, v));
+    state.slots = map;
+  }
+  const slotFor = (def, v) => (state && state.def === def && state.slots && state.slots.has(v.s) ? state.slots.get(v.s) : slotOf(def, v));
+  const swatchStyle = (def, v, s) => `background:${s && s.projection ? `repeating-linear-gradient(90deg, var(${SLOTS[slotFor(def, v)]}) 0 4px, transparent 4px 7px)` : `var(${SLOTS[slotFor(def, v)]})`}`;
 
   function buildDetailHtml(def, ind) {
     const hs = ind.series[def.headline.series];
@@ -275,8 +355,15 @@
       ...(def.secondary || []).map((x) => { const ss = ind.series[x.series]; if (!ss) return null; const l = last(ss); return { k: x.label, v: x.fmt(l.v), s: periodLabel(l.p, ss.freq) }; }).filter(Boolean),
     ];
     const ranges = def.defaultYears >= 30 ? [10, 20, 30, 100] : [5, 10, 20, 100];
-    const pills = def.views.filter((v) => ind.series[v.s]).map((v, i) =>
-      `<button class="pill" type="button" data-series="${v.s}" aria-pressed="false" title="${ind.series[v.s].label}"><span class="sw" style="background:var(${SLOTS[def.views.indexOf(v) % 8]})"></span>${viewLabel(v, ind.series[v.s])}</button>`).join('');
+    const pill = (v) => `<button class="pill" type="button" data-series="${v.s}" aria-pressed="false" title="${ind.series[v.s].label}"><span class="sw" style="${swatchStyle(def, v, ind.series[v.s])}"></span>${viewLabel(v, ind.series[v.s])}</button>`;
+    const avail = def.views.filter((v) => ind.series[v.s]);
+    const groups = [...new Set(avail.map((v) => v.group || 'Series'))];
+    const dense = groups.length > 3 || avail.length > 16;   // many series: fold each group, open only those with a series switched on
+    const pillRows = groups.map((g) => {
+      const vs = avail.filter((v) => (v.group || 'Series') === g);
+      if (!dense) return `<div class="group"><span class="label">${g}</span>${vs.map(pill).join('')}</div>`;
+      return `<details class="fold"${vs.some((v) => state.on.has(v.s)) ? ' open' : ''}><summary><span class="label">${g}</span><span class="count">${vs.length} series</span></summary><div class="group">${vs.map(pill).join('')}</div></details>`;
+    }).join('');
     const sources = (ind.sources || []).map((s) => `<li>${s.url ? `<a href="${s.url}">${s.name}</a>` : s.name}${s.table ? ` (${/^\d/.test(s.table) ? 'table ' : 'dataflow '}${s.table})` : ''}${s.updated ? `, updated ${s.updated}` : ''}${s.note ? `. ${s.note}` : ''}</li>`).join('');
     const derived = Object.values(ind.series).filter((s) => s.derived).map((s) => `<li>${s.label}${s.note ? ': ' + s.note : ''}</li>`).join('');
     return `
@@ -288,7 +375,7 @@
       <div class="d-stats">${stats.map((s) => `<div class="st"><div class="k">${s.k}</div><div class="v">${s.v}<small>${s.s}</small></div></div>`).join('')}</div>
       <div class="d-controls">
         <div class="group"><span class="label">Range</span>${ranges.map((y) => `<button class="pill" type="button" data-years="${y}">${y >= 100 ? 'Max' : y + ' y'}</button>`).join('')}</div>
-        <div class="group"><span class="label">Series</span>${pills}</div>
+        ${pillRows}
         <div class="group"><button class="pill" type="button" data-table aria-pressed="false">Table</button><button class="pill" type="button" data-csv>Download CSV</button></div>
       </div>
       <div class="d-chart"><canvas id="d-canvas" role="img" aria-label="${def.title} chart"></canvas></div>
@@ -311,7 +398,12 @@
 
   function syncPills() {
     inner.querySelectorAll('[data-years]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.years === state.years)));
-    inner.querySelectorAll('[data-series]').forEach((b) => b.setAttribute('aria-pressed', String(state.on.has(b.dataset.series))));
+    assignSlots();
+    inner.querySelectorAll('[data-series]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(state.on.has(b.dataset.series)));
+      const v = viewOf(b.dataset.series);
+      b.querySelector('.sw').style.cssText = swatchStyle(state.def, v, state.ind.series[v.s]);
+    });
     inner.querySelector('[data-table]').setAttribute('aria-pressed', String(state.table));
   }
 
@@ -319,16 +411,23 @@
   function alignedData() {
     const views = state.def.views.filter((v) => state.on.has(v.s));
     const sers = views.map((v) => state.ind.series[v.s]);
-    const endT = Math.max(...sers.map((s) => periodTime(s.periods[s.periods.length - 1])));
+    const actual = sers.filter((s) => !s.projection);   // the range is anchored on the data, projections extend beyond it
+    const endT = Math.max(...(actual.length ? actual : sers).map((s) => periodTime(s.periods[s.periods.length - 1])));
     const startT = state.years >= 100 ? -Infinity : endT - state.years + 1 / 12;
     const periodSet = new Map();
     sers.forEach((s) => s.periods.forEach((p) => { const t = periodTime(p); if (t >= startT) periodSet.set(p, t); }));
-    const periods = [...periodSet.keys()].sort((a, b) => periodSet.get(a) - periodSet.get(b));
+    let periods = [...periodSet.keys()].sort((a, b) => periodSet.get(a) - periodSet.get(b));
+    // Quarterly projections sit on a monthly category axis: fill in the months in between so time stays proportional
+    if (sers.some((s) => s.projection) && sers.every((s) => s.freq === 'M') && periods.length) {
+      const [y0, m0] = periods[0].split('-').map(Number), [y1, m1] = periods[periods.length - 1].split('-').map(Number);
+      periods = [];
+      for (let y = y0, m = m0; y < y1 || (y === y1 && m <= m1); m === 12 ? (y++, m = 1) : m++) periods.push(`${y}-${String(m).padStart(2, '0')}`);
+    }
     const datasets = views.map((v) => {
       const s = state.ind.series[v.s];
       const map = new Map(s.periods.map((p, i) => [p, s.values[i]]));
       const scale = (state.def.scale && s.unit.startsWith('NOK million')) ? state.def.scale : 1;
-      return { v, s, slot: state.def.views.indexOf(v), scale, label: viewLabel(v, s),
+      return { v, s, slot: slotFor(state.def, v), scale, label: viewLabel(v, s),
                unit: scale !== 1 ? state.def.unitLabel : s.unit,
                data: periods.map((p) => (map.has(p) && map.get(p) != null ? map.get(p) * scale : null)) };
     });
@@ -372,7 +471,7 @@
     return {
       responsive: true, maintainAspectRatio: false, animation: false, normalized: true,
       interaction: { mode: 'index', intersect: false },
-      layout: { padding: { top: 6, right: 8 } },
+      layout: { padding: { top: 6, right: 18 } },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -402,9 +501,11 @@
       const color = cssVar(SLOTS[d.slot % 8]);
       const base = { label: d.label, data: d.data, _dec: d.s.decimals, _unit: unitShort(d.unit) };
       if (d.v.kind === 'bar') return { ...base, type: 'bar', backgroundColor: color, borderRadius: 2, borderSkipped: 'start', barPercentage: 0.9, categoryPercentage: 0.9, order: 2 };
-      return { ...base, type: 'line', borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 10, spanGaps: periods.length < 400, tension: 0.15, order: 1 };
+      const proj = d.s.projection ? { borderDash: [6, 4], spanGaps: true } : {};
+      return { ...base, type: 'line', borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 10, spanGaps: periods.length < 400, tension: 0.15, order: 1, ...proj };
     });
-    const showTarget = state.def.target && datasets.some((d) => ['cpi_yoy', 'cpiate_yoy', 'cpiat_yoy'].includes(d.v.s)) && datasets.every((d) => ['cpi_yoy', 'cpiate_yoy', 'cpiat_yoy'].includes(d.v.s));
+    const inflationKeys = ['cpi_yoy', 'cpiate_yoy', 'cpiat_yoy', 'proj_cpi', 'proj_cpiate'];
+    const showTarget = state.def.target && datasets.some((d) => inflationKeys.includes(d.v.s)) && datasets.every((d) => inflationKeys.includes(d.v.s));
     const opts = baseOptions(periods, unit, { crosshair: {}, targetLine: showTarget ? { value: state.def.target, label: 'Target 2 %' } : {} });
     const emphasiseZero = datasets.some((d) => d.v.kind === 'bar' || d.data.some((v) => v != null && v < 0));
     if (emphasiseZero) opts.scales.y.grid.color = (ctx) => (ctx.tick.value === 0 ? cssVar('--viz-axis') : cssVar('--viz-grid'));
@@ -412,7 +513,7 @@
     if (chart) chart.destroy();
     chart = new Chart(ctx, { type: 'line', data: { labels: periods, datasets: ds }, options: opts, plugins: [crosshair, targetLine] });
     document.getElementById('d-legend').innerHTML = datasets.map((d) =>
-      `<span><span class="sw ${d.v.kind}" style="background:var(${SLOTS[d.slot % 8]})"></span>${d.s.label}${d.s.derived ? ' *' : ''}</span>`).join('');
+      `<span><span class="sw ${d.v.kind}" style="${swatchStyle(state.def, d.v, d.s)}"></span>${d.s.label}${d.s.derived ? ' *' : ''}</span>`).join('');
     if (state.table) drawTable();
   }
 

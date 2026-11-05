@@ -118,6 +118,12 @@ dialog.detail::backdrop { background: rgba(10, 14, 20, .45); backdrop-filter: bl
 .pill[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .pill .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.d-controls details.fold { flex-basis: 100%; }
+.d-controls details.fold > summary { cursor: pointer; padding: .1rem 0; }
+.d-controls details.fold > summary:hover .label { color: var(--accent); }
+.d-controls details.fold > summary .count { font-size: .72rem; color: var(--faint); }
+.d-controls details.fold[open] > summary .count { display: none; }
+.d-controls details.fold > .group { margin: .3rem 0 .2rem 1rem; }
 
 .d-chart { position: relative; height: 380px; background: var(--viz-surface); border: 1px solid var(--border); border-radius: 10px; padding: .75rem .75rem .5rem; }
 .d-chart canvas { width: 100% !important; height: 100% !important; }

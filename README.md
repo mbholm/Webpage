@@ -60,13 +60,15 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 
 ### The Norway dashboard (dashboard.html)
 
-A one-page dashboard of Norwegian macro indicators (GDP, inflation, unemployment, interest rates, the
-krone, trade balance, current account, the oil fund, house prices, productivity). Three files:
+A one-page dashboard of Norwegian macro indicators (GDP, inflation, unemployment, employment, interest
+rates, the krone, trade balance, current account, the oil fund, house prices, productivity, wages and
+labour shares). Three files:
 
 - `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
-  (SDMX API) and NBIM, computes the derived series (TFP, labour productivity, ratios to GDP, growth
-  rates) and writes `data/dashboard.json`. Each indicator is fetched independently; if one source fails,
-  that indicator keeps the previous data and the error is recorded in the JSON.
+  (SDMX API), Eurostat (JSON API), NAV and NBIM, computes the derived series (TFP, labour productivity,
+  labour shares, ratios to GDP, growth rates) and writes `data/dashboard.json`. Each indicator is fetched
+  independently; if one source fails, that indicator keeps the previous data and the error is recorded
+  in the JSON.
 - `dashboard.js` holds the display definitions (titles, descriptions, which series a tile shows, which
   are offered in the detail view) keyed by the same indicator ids, and renders the page.
 - `dashboard.css` holds the page's styles, including the chart palette.
@@ -79,6 +81,29 @@ workflow runs `build_dashboard_data.py` on every push **and every morning at 06:
 ```
 python build_dashboard_data.py
 ```
+
+Sources without an API are read from the publisher's web page, so they break if the page is redesigned:
+
+- **NAV registered unemployment**: the two Excel files linked from NAV's "Hovedtall om arbeidsmarkedet"
+  page (seasonally adjusted main figures, and the history from 1991). The links change every month, so
+  the script finds them by file-name prefix (`HARB100`, `HL100`).
+- **Norges Bank projections** (policy rate, CPI, CPI-ATE): the data workbook of the latest Monetary
+  Policy Report, found from the report index page. Quarterly values are plotted at the middle month of
+  each quarter and drawn dashed. If the fetch fails, the previous projections are kept.
+- **Oil fund value**: the chart data on NBIM's "The fund's value" page.
+- **Oil fund management costs**: NBIM publishes no data series in kroner. The numbers are a hand-kept
+  table at the top of `ind_oil_fund` in the build script (`NBIM_COSTS_REPORTED`), transcribed from the
+  annual reports ("Total management costs in Norges Bank were X billion kroner"). **Add one line each
+  year** when the annual report comes out in late February. 1998–2010 are estimated from NBIM's cost
+  ratio in basis points and are marked as approximate on the page.
+
+Method notes: TFP is computed in growth form (Törnqvist), weighting hours and capital by the labour
+share from the national accounts (table 09170), then cumulated into an index. Labour shares follow the
+definitions in «Lønnsandelen i industrien»: gross = W/(W + capital consumption + operating surplus),
+net = W/(W + operating surplus).
+
+A tile can be linked directly: `dashboard.html#inflation` opens it, and
+`dashboard.html#oil_fund=costs` opens it with the named series switched on.
 
 To preview, serve over http (`python -m http.server 8000`); the page loads the JSON with fetch().
 To add an indicator: write an `ind_*` function in the build script and a matching entry in `DEFS` in
