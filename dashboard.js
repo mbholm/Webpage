@@ -206,10 +206,10 @@
     },
     {
       id: 'labor_shares', title: 'Labor shares', kicker: 'Income distribution', goodUp: null,
-      desc: 'The share of factor income that goes to labor, by industry, computed from the annual national accounts. The gross labor share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus. The net labor share leaves capital consumption out of the denominator. The headline is manufacturing. The common component for manufacturing is the first principal component of the sectoral labor shares, computed in real time as in Holm and Jasinski (Samfunnsøkonomen), and centered on the same average as the manufacturing share. Dashed lines show each series’ average over the past 30 years.',
-      headline: { series: 'gross_mfg', fmt: (v) => fmt.pct(v), sub: 'gross labor share, manufacturing' },
-      secondary: [{ series: 'net_mfg', label: 'net', fmt: fmt.pct }],
-      spark: 'gross_mfg',
+      desc: 'The share of factor income that goes to labor, by industry, computed from the annual national accounts. The gross labor share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus. The net labor share leaves capital consumption out of the denominator. The headline is the net labor share in manufacturing. The common component for manufacturing is the first principal component of the sectoral labor shares, computed in real time as in Holm and Jasinski (Samfunnsøkonomen), and centered on the same average as the manufacturing share. Dashed lines show each series’ average over the past 30 years.',
+      headline: { series: 'net_mfg', fmt: (v) => fmt.pct(v), sub: 'net labor share, manufacturing' },
+      secondary: [{ series: 'gross_mfg', label: 'gross', fmt: fmt.pct }],
+      spark: 'net_mfg',
       views: ['gross', 'net'].flatMap((g) => [['mfg', 'Manufacturing'], ['pc', 'Manufacturing, common component'], ['business', 'Mainland excl. government'], ['mainland', 'Mainland Norway'], ['total', 'Total economy'], ['oilgas', 'Oil and gas'],
                   ['construction', 'Construction'], ['trade', 'Trade'], ['transport', 'Transport'], ['accommodation', 'Accommodation and food'], ['ict', 'Information and communication'],
                   ['finance', 'Finance'], ['professional', 'Professional services']]
