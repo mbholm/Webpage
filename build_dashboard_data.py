@@ -1510,8 +1510,16 @@ BEA_NET_STOCK = "kcttotl1es00"   # Fixed Assets table 1.2, line 2: chain-type qu
 
 
 def fred(ids: list[str], start: str) -> dict[str, dict[str, float]]:
-    """{series id: {date: value}} from FRED's chart download. Missing observations are left out."""
-    raw = http_get("https://fred.stlouisfed.org/graph/fredgraph.csv?id=" + ",".join(ids) + "&cosd=" + start).decode("utf-8-sig")
+    """{series id: {date: value}} from FRED's chart download. Missing observations are left out.
+    FRED does not always answer the build server. A request that gets no answer waits for its timeout, so the timeout is short
+    and after one failure FRED is not asked again in the same run (the tiles then keep their previous United States series)."""
+    if "fred_down" in _CMP:
+        raise RuntimeError("FRED did not answer earlier in this run: " + _CMP["fred_down"])
+    try:
+        raw = http_get("https://fred.stlouisfed.org/graph/fredgraph.csv?id=" + ",".join(ids) + "&cosd=" + start, timeout=20).decode("utf-8-sig")
+    except Exception as e:
+        _CMP["fred_down"] = f"{type(e).__name__}: {e}"
+        raise
     rows = list(csv.reader(io.StringIO(raw)))
     out: dict[str, dict[str, float]] = {i: {} for i in rows[0][1:]}
     for r in rows[1:]:
@@ -1547,7 +1555,7 @@ def bea_fixed_assets(code: str) -> dict[str, float]:
     """One annual series from the Bureau of Economic Analysis' fixed assets flat file (all series in one text file, read as a stream)."""
     out = {}
     req = urllib.request.Request(BEA_FIXED_ASSETS, headers=UA)
-    with urllib.request.urlopen(req, timeout=240) as r:
+    with urllib.request.urlopen(req, timeout=40) as r:   # the timeout is per read, not for the whole file
         for line in r:
             if line.startswith(code.encode() + b","):
                 _, year, value = next(csv.reader([line.decode("utf-8", "replace").strip()]))

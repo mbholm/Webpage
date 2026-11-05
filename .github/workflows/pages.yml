@@ -50,6 +50,7 @@ jobs:
         run: python build_recent.py
       - name: Fetch fresh dashboard data (SSB, Norges Bank, NBIM)
         run: python build_dashboard_data.py
+        timeout-minutes: 6        # a source that does not answer must not hold the deploy up
         continue-on-error: true   # a source outage must not block the deploy; the committed data/dashboard.json is the fallback
       - name: Stamp stylesheet and script links with the commit id
         # Browsers keep old copies of .css/.js files; a new ?v= on every commit makes them fetch the new ones.
