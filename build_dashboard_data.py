@@ -1198,7 +1198,7 @@ def budget_breakdowns(page_html: str, year: int) -> tuple[list[dict], dict]:
     return out, {"expenditure": exp["total"], "revenue": rev["total"], "oil_corrected_balance": bal}
 
 
-def ind_budget() -> dict:
+def ind_budget(fund: dict | None = None) -> dict:
     """Fiscal policy from the latest Nasjonalbudsjett: the published data behind the figures (Excel) and the state budget's
     revenue and expenditure table. No API: the pages are found from the budget's hub page for the newest year available."""
     base = "https://www.regjeringen.no"
@@ -1280,6 +1280,35 @@ def ind_budget() -> dict:
         "public_expenditure": S("General government expenditure", "percent of GDP for Mainland Norway", "A", *column(f_pub, r"^Offentlige utgifter"), 1),
         "tax_revenue": S("General government tax revenue", "percent of GDP for Mainland Norway", "A", *column(f_pub, r"^Skatte- og avgiftsinntekter"), 1),
     }
+    # Actual use of oil money: the oil-corrected deficit in kroner over the fund's value at the start of the year.
+    # Kroner amounts are the published shares of trend GDP times trend GDP for Mainland Norway (same workbook).
+    f_trend = figure(r"^BNP Fastlands-Norge\. Mrd\. kroner\. Løpende priser")
+    trend = dict(zip(*column(f_trend, r"^Trend$")))
+    oc = dict(zip(series["oil_corrected_gdp"]["periods"], series["oil_corrected_gdp"]["values"]))
+    sobu = dict(zip(series["deficit_gdp"]["periods"], series["deficit_gdp"]["values"]))
+    uttak = dict(zip(series["fund_pct"]["periods"], series["fund_pct"]["values"]))
+    value = dict(zip(fund["series"]["value"]["periods"], fund["series"]["value"]["values"])) if fund else {}
+    ap, av, kp, k_oc, k_st = [], [], [], [], []
+    for y in sorted(oc):
+        if y in trend:
+            kp.append(y)
+            k_oc.append(round(oc[y] / 100 * trend[y], 1))
+            k_st.append(round(sobu[y] / 100 * trend[y], 1) if y in sobu else None)
+        opening = value.get(str(int(y) - 1)) if int(y) - 1 < this_year else None    # NBIM's year-end value; the current year is not a year-end
+        if y in trend and opening:
+            ap.append(y)
+            av.append(round(100 * (oc[y] / 100 * trend[y]) / opening, 2))
+        elif sobu.get(y) and y in uttak:                                            # opening value not known yet: scale the structural figure
+            ap.append(y)
+            av.append(round(uttak[y] * oc[y] / sobu[y], 2))
+    series["fund_pct_actual"] = S("Oil-corrected deficit as a share of the oil fund (actual use of oil money)", "percent of the fund", "A", ap, av, 1, derived=True,
+                                  note=("The oil-corrected deficit in kroner divided by the fund's market value at the start of the year (NBIM). The deficit in kroner is its "
+                                        "published share of trend GDP times trend GDP for Mainland Norway. It is not adjusted for the business cycle. For a year where the opening "
+                                        "fund value is not known yet, the structural figure is scaled by the ratio of the two deficits."))
+    series["oil_corrected_nok"] = S("Oil-corrected deficit", "NOK billion", "A", kp, k_oc, 0, derived=True,
+                                    note="Published share of trend GDP times trend GDP for Mainland Norway, both from Nasjonalbudsjettet.")
+    series["deficit_nok"] = S("Structural non-oil deficit", "NOK billion", "A", kp, k_st, 0, derived=True,
+                              note="Published share of trend GDP times trend GDP for Mainland Norway, both from Nasjonalbudsjettet.")
     return {"series": series, "breakdowns": breakdowns, "budget_year": year, "totals": totals,
             "sources": [src(f"Ministry of Finance, Nasjonalbudsjettet {year}, data behind the figures", None, fig_url, None, est),
                         src(f"Ministry of Finance, state budget {year}, revenue and expenditure", None, bud_url, None,
@@ -1344,7 +1373,7 @@ def main() -> int:
     run("trade", ind_trade)
     run("current_account", ind_current_account, gdp)
     run("oil_fund", ind_oil_fund, gdp)
-    run("budget", ind_budget, keep_quietly=True)   # regjeringen.no does not answer GitHub's servers
+    run("budget", ind_budget, indicators.get("oil_fund"), keep_quietly=True)   # regjeringen.no does not answer GitHub's servers
     run("house_prices", ind_house_prices)
     run("credit", ind_credit)
     run("productivity", ind_productivity)

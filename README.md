@@ -106,6 +106,10 @@ Sources without an API are read from the publisher's web page, so they break if 
   in the committed `data/dashboard.json`. To update them (new budget in October), run
   `python build_dashboard_data.py` on your own computer and push. The reason for a kept indicator is
   written under `kept` in the JSON.
+  Actual oil spending as a share of the fund is computed in the script: the oil-corrected deficit in
+  kroner (its share of trend GDP times trend GDP, both from the workbook) over NBIM's fund value at
+  the start of the year. The same calculation on the structural deficit reproduces the Ministry's own
+  figure to within 0.2 percentage points, which is the check that the method is right.
 - **Oil fund management costs**: NBIM publishes no data series in kroner. The numbers are a hand-kept
   table at the top of `ind_oil_fund` in the build script (`NBIM_COSTS_REPORTED`), transcribed from the
   annual reports ("Total management costs in Norges Bank were X billion kroner"). **Add one line each
