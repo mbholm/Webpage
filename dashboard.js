@@ -176,9 +176,9 @@
     {
       id: 'productivity', title: 'Productivity', kicker: 'Supply side', goodUp: true,
       desc: 'Labor productivity (value added per hour worked) and total factor productivity in Mainland Norway, from the annual national accounts. TFP growth is computed by growth accounting, weighting hours and capital by the labor share observed in the national accounts (average of adjacent years), and then cumulated into an index.',
-      headline: { series: 'labor_productivity_growth', fmt: (v) => fmt.signedPct(v), sub: 'labor productivity growth' },
-      secondary: [{ series: 'tfp_growth', label: 'TFP growth', fmt: fmt.signedPct }],
-      spark: 'labor_productivity_growth', sparkZero: true,
+      headline: { series: 'tfp_growth', fmt: (v) => fmt.signedPct(v), sub: 'total factor productivity growth' },
+      secondary: [{ series: 'labor_productivity_growth', label: 'labor productivity growth', fmt: fmt.signedPct }],
+      spark: 'tfp_growth', sparkZero: true,
       views: [{ s: 'labor_productivity', short: 'Labor productivity', kind: 'line', on: true }, { s: 'tfp', short: 'TFP', kind: 'line', on: true }, { s: 'capital_per_hour', short: 'Capital per hour', kind: 'line' },
               { s: 'labor_productivity_growth', short: 'Labor productivity growth', kind: 'bar' }, { s: 'tfp_growth', short: 'TFP growth', kind: 'bar' },
               { s: 'output_growth', short: 'Value added growth', kind: 'line' }, { s: 'hours_growth', short: 'Hours growth', kind: 'line' }, { s: 'capital_growth', short: 'Capital growth', kind: 'line' },
