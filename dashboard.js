@@ -52,28 +52,6 @@
       defaultYears: 10,
     },
     {
-      id: 'consumption', title: 'Consumption', kicker: 'Activity', goodUp: true,
-      desc: 'Household consumption and general government consumption from the quarterly national accounts. Volumes at constant 2023 prices, seasonally adjusted. The latest quarters are preliminary.',
-      headline: { series: 'households_qoq', fmt: (v) => fmt.signedPct(v), sub: 'household consumption, quarter-on-quarter, s.a.' },
-      secondary: [{ series: 'households_yoy', label: 'y/y', fmt: fmt.signedPct }],
-      spark: 'households_qoq', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
-      views: [['qoq', 'Quarter-on-quarter growth', 'bar'], ['yoy', 'Growth from a year earlier', 'line'], ['level', 'Level per quarter, constant prices', 'line']].flatMap(([suffix, group, kind]) =>
-        [['households', 'Households'], ['goods', 'Goods'], ['services', 'Services'], ['abroad', 'Purchases abroad'], ['government', 'General government']]
-          .map(([k, t]) => ({ s: `${k}_${suffix}`, short: t, tip: `${t}, ${suffix === 'qoq' ? 'q/q' : suffix === 'yoy' ? 'y/y' : 'level'}`, kind, on: k === 'households' && suffix !== 'level', group }))),
-      defaultYears: 10,
-    },
-    {
-      id: 'investment', title: 'Investment', kicker: 'Activity', goodUp: true,
-      desc: 'Gross fixed capital formation from the quarterly national accounts. Mainland investment excludes petroleum extraction, pipeline transport and ocean shipping, and is split into business, housing and general government investment. Volumes at constant 2023 prices, seasonally adjusted. Quarterly investment figures are volatile and the latest quarters are preliminary.',
-      headline: { series: 'mainland_qoq', fmt: (v) => fmt.signedPct(v), sub: 'mainland investment, quarter-on-quarter, s.a.' },
-      secondary: [{ series: 'mainland_yoy', label: 'y/y', fmt: fmt.signedPct }],
-      spark: 'mainland_yoy', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
-      views: [['yoy', 'Growth from a year earlier', 'line'], ['qoq', 'Quarter-on-quarter growth', 'bar'], ['level', 'Level per quarter, constant prices', 'line']].flatMap(([suffix, group, kind]) =>
-        [['mainland', 'Mainland Norway'], ['business', 'Business'], ['housing', 'Housing'], ['government', 'General government'], ['petroleum', 'Petroleum'], ['total', 'Total']]
-          .map(([k, t]) => ({ s: `${k}_${suffix}`, short: t, tip: `${t}, ${suffix === 'qoq' ? 'q/q' : suffix === 'yoy' ? 'y/y' : 'level'}`, kind, on: k === 'mainland' && suffix === 'yoy', group }))),
-      defaultYears: 10,
-    },
-    {
       id: 'inflation', title: 'Inflation', kicker: 'Prices', goodUp: null,
       desc: 'Twelve-month change in the consumer price index (CPI) and in CPI-ATE, the index adjusted for tax changes and excluding energy products that Norges Bank uses as its core measure. The inflation target is 2 percent. Dashed lines are Norges Bank’s quarterly projections from the latest Monetary Policy Report.',
       headline: { series: 'cpi_yoy', fmt: (v) => fmt.pct(v), sub: 'CPI, 12-month change' },
@@ -237,6 +215,28 @@
                   ['finance', 'Finance'], ['professional', 'Professional services']]
                 .map(([k, t]) => ({ s: `${g}_${k}`, short: t, tip: `${g === 'gross' ? 'Gross' : 'Net'}, ${t}`, avgFrom: k === 'pc' ? `${g}_mfg` : null, kind: 'line', on: k === 'mfg', group: g === 'gross' ? 'Gross labor share' : 'Net labor share' }))),
       defaultYears: 30, showMethod: true, avgYears: 30,
+    },
+    {
+      id: 'consumption', title: 'Consumption', kicker: 'Activity', goodUp: true,
+      desc: 'Household consumption and general government consumption from the quarterly national accounts. Volumes at constant 2023 prices, seasonally adjusted. The latest quarters are preliminary.',
+      headline: { series: 'households_qoq', fmt: (v) => fmt.signedPct(v), sub: 'household consumption, quarter-on-quarter, s.a.' },
+      secondary: [{ series: 'households_yoy', label: 'y/y', fmt: fmt.signedPct }],
+      spark: 'households_qoq', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
+      views: [['qoq', 'Quarter-on-quarter growth', 'bar'], ['yoy', 'Growth from a year earlier', 'line'], ['level', 'Level per quarter, constant prices', 'line']].flatMap(([suffix, group, kind]) =>
+        [['households', 'Households'], ['goods', 'Goods'], ['services', 'Services'], ['abroad', 'Purchases abroad'], ['government', 'General government']]
+          .map(([k, t]) => ({ s: `${k}_${suffix}`, short: t, tip: `${t}, ${suffix === 'qoq' ? 'q/q' : suffix === 'yoy' ? 'y/y' : 'level'}`, kind, on: k === 'households' && suffix !== 'level', group }))),
+      defaultYears: 10,
+    },
+    {
+      id: 'investment', title: 'Investment', kicker: 'Activity', goodUp: true,
+      desc: 'Gross fixed capital formation from the quarterly national accounts. Mainland investment excludes petroleum extraction, pipeline transport and ocean shipping, and is split into business, housing and general government investment. Volumes at constant 2023 prices, seasonally adjusted. Quarterly investment figures are volatile and the latest quarters are preliminary.',
+      headline: { series: 'mainland_qoq', fmt: (v) => fmt.signedPct(v), sub: 'mainland investment, quarter-on-quarter, s.a.' },
+      secondary: [{ series: 'mainland_yoy', label: 'y/y', fmt: fmt.signedPct }],
+      spark: 'mainland_yoy', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
+      views: [['yoy', 'Growth from a year earlier', 'line'], ['qoq', 'Quarter-on-quarter growth', 'bar'], ['level', 'Level per quarter, constant prices', 'line']].flatMap(([suffix, group, kind]) =>
+        [['mainland', 'Mainland Norway'], ['business', 'Business'], ['housing', 'Housing'], ['government', 'General government'], ['petroleum', 'Petroleum'], ['total', 'Total']]
+          .map(([k, t]) => ({ s: `${k}_${suffix}`, short: t, tip: `${t}, ${suffix === 'qoq' ? 'q/q' : suffix === 'yoy' ? 'y/y' : 'level'}`, kind, on: k === 'mainland' && suffix === 'yoy', group }))),
+      defaultYears: 10,
     },
     {
       id: 'trade', title: 'Trade balance', kicker: 'External trade', goodUp: null,
