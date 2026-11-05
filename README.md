@@ -130,7 +130,8 @@ The comparison blocks (`CMP_*` and `cmp_*` in the build script, `BLOCKS` and `co
 - Productivity is not Eurostat's own indicator. Labor productivity and TFP are computed for every country by
   `growth_accounting`, the same function as for Mainland Norway, from Eurostat's national accounts (value added
   `nama_10_a10`, hours `nama_10_a10_e`, net capital stock `nama_10_nfa_st`, income `nama_10_gdp`). Countries
-  without a capital stock at constant prices (Iceland, Switzerland) get labor productivity only.
+  without a capital stock at constant prices (Iceland, Switzerland) get labor productivity only. Norway's total
+  economy uses Statistics Norway's tables instead, because the capital stock Eurostat has for Norway ends in 2022.
 - Eurostat's unit codes carry the reference year (`CLV_I20`, `CLV20_MNAC`). When Eurostat moves to a new
   reference year the codes in `CMP_EUROSTAT` must be updated. The tiles show a warning when that happens.
 - Eurostat's euro area code differs between datasets (`EA`, `EA20`, `EA21`). The script takes the one with the

@@ -1590,6 +1590,21 @@ def cmp_growth_accounting(key: str) -> tuple[dict, dict]:
     return _CMP[("ga", key)]
 
 
+def norway_total_growth_accounting() -> tuple[dict, dict]:
+    """Growth accounting for Norway's total economy from Statistics Norway's national accounts, the same tables as for
+    Mainland Norway. Eurostat's figures for Norway are not used because its capital stock for Norway ends several years earlier."""
+    if ("ga", "no_ssb") not in _CMP:
+        code, start = "nr23_6", "from(1990)"
+        py, sy, _ = ssb_series(ssb_data("09170", [("NACE", [code]), ("ContentsCode", ["BNPB2"]), ("Tid", [start])]))
+        pl, sl, _ = ssb_series(ssb_data("09174", [("NACE", [code]), ("ContentsCode", ["Timeverk"]), ("Tid", [start])]))
+        pk, sk, _ = ssb_series(ssb_data("09181", [("NACE", [code]), ("ContentsCode", ["KAPN4"]), ("Tid", [start])]))
+        ys, gross, _ = labor_shares(code)
+        SH = {y: v / 100 for y, v in zip(ys, gross) if v is not None and y >= "1990"}
+        Y, L, K = dict(zip(py, sy[(code, "BNPB2")])), dict(zip(pl, sl[(code, "Timeverk")])), dict(zip(pk, sk[(code, "KAPN4")]))
+        _CMP[("ga", "no_ssb")] = (growth_accounting(Y, L, K, SH), SH)
+    return _CMP[("ga", "no_ssb")]
+
+
 def cmp_productivity(block: str, prod: dict | None) -> dict:
     if not prod:
         raise RuntimeError("needs the productivity indicator (Mainland Norway comes from Statistics Norway)")
@@ -1606,7 +1621,7 @@ def cmp_productivity(block: str, prod: dict | None) -> dict:
     no_capital = []
     for key in CMP_BLOCKS[block]:
         name = "Norway, total economy" if key == "no" else cmp_name(key)
-        ga, SH = cmp_growth_accounting(key)
+        ga, SH = norway_total_growth_accounting() if key == "no" else cmp_growth_accounting(key)
         years = ga["years"]
         series[f"lp_{key}"] = S(f"Labor productivity, {name}: value added per hour worked (2000 = 100)", "index", "A", years, index_to(ga["lp"], years, base), 1, derived=True)
         series[f"lpg_{key}"] = S(f"Labor productivity growth, {name}", "percent", "A", *trim(years, pct_change(ga["lp"], 1)), 1, derived=True)
@@ -1621,8 +1636,8 @@ def cmp_productivity(block: str, prod: dict | None) -> dict:
               "(Törnqvist index) from a Cobb-Douglas production function. Annual TFP growth is Δlog A = Δlog Y − (1 − s̄) Δlog K − s̄ Δlog L, where s̄ is the average of "
               "the labor share in the two adjacent years, and the index is the cumulated growth rates set to 100 in 2000. Y is gross value added at constant prices, "
               "L is total hours worked and K is the net stock of fixed assets at constant prices. The labor share is compensation of employees divided by compensation "
-              "of employees plus gross operating surplus and mixed income. For Mainland Norway the data are Statistics Norway's national accounts. For the other "
-              "countries, and for Norway's total economy, they are the national accounts as published by Eurostat, for the whole economy. TFP ends where the capital "
+              "of employees plus gross operating surplus and mixed income. For Mainland Norway and for Norway's total economy the data are Statistics Norway's "
+              "national accounts. For the other countries they are the national accounts as published by Eurostat, for the whole economy. TFP ends where the capital "
               "stock ends, which is earlier than the other series for some countries. "
               + (f"Eurostat has no capital stock at constant prices for {' and '.join(no_capital)}, so TFP is missing there. " if no_capital else "")
               + "No adjustment is made for capacity utilization, labor quality or the labor income of the self-employed (which is part of mixed income).")
@@ -1631,8 +1646,8 @@ def cmp_productivity(block: str, prod: dict | None) -> dict:
                         cmp_src("hours", "employment by industry, annual national accounts", "Hours worked, total employment, domestic concept."),
                         cmp_src("capital", "capital stocks by industry and asset type", "Net stock of total fixed assets, chain-linked volumes."),
                         cmp_src("income", "GDP and main components, annual", "Compensation of employees and gross operating surplus and mixed income, current prices."),
-                        src("Statistics Norway, annual national accounts (Mainland Norway)", "09189", "https://www.ssb.no/en/statbank/table/09189",
-                            note="Also tables 09174 (hours), 09181 (capital) and 09170 (income), as in the productivity tile at the top of the page.")]}
+                        src("Statistics Norway, annual national accounts (Mainland Norway and Norway's total economy)", "09189", "https://www.ssb.no/en/statbank/table/09189",
+                            note="Also tables 09174 (hours), 09181 (capital) and 09170 (income and total value added), as in the productivity tile at the top of the page.")]}
 
 
 def cmp_rates(block: str) -> dict:
