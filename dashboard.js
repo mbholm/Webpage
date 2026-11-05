@@ -297,13 +297,18 @@
       policy: [['no', 'Norway', 0], ['se', 'Sweden', 1], ['dk', 'Denmark', 2], ['fi', 'Finland (euro area)', 3], ['is', 'Iceland', 4]],
       yields: [['no', 'Norway', 0], ['se', 'Sweden', 1], ['dk', 'Denmark', 2], ['fi', 'Finland', 3], ['is', 'Iceland', 4]],
       ratesNote: 'Finland is in the euro area and has the European Central Bank’s rate. The OECD’s yield series for Iceland ends in 2022.',
+      inflationNote: '', employmentNote: '',
+      tfpNote: 'TFP needs a capital stock, which ends earlier than the other series for some countries and is missing for Iceland.',
     },
     europe: {
-      kicker: 'European comparison', others: 'the euro area and its largest economies, plus Switzerland', shown: 5,
-      countries: [['no', 'Norway'], ['ea', 'Euro area'], ['de', 'Germany'], ['fr', 'France'], ['nl', 'Netherlands'], ['it', 'Italy'], ['es', 'Spain'], ['ch', 'Switzerland']],
-      policy: [['no', 'Norway', 0], ['ea', 'Euro area', 1], ['gb', 'United Kingdom', 6], ['ch', 'Switzerland', 7]],
-      yields: [['no', 'Norway', 0], ['de', 'Germany', 2], ['fr', 'France', 3], ['nl', 'Netherlands', 4], ['it', 'Italy', 5], ['gb', 'United Kingdom', 6], ['ch', 'Switzerland', 7]],
-      ratesNote: 'Germany, France, the Netherlands and Italy share the euro area’s policy rate, so they appear only among the bond yields. The United Kingdom is included here because the Bank for International Settlements and the OECD cover it. Eurostat, the source for the other tiles, stopped publishing figures for the United Kingdom in 2020.',
+      kicker: 'Europe and the US', others: 'the United States, the euro area and its largest economies', shown: 6,
+      countries: [['no', 'Norway'], ['us', 'United States'], ['ea', 'Euro area'], ['de', 'Germany'], ['fr', 'France'], ['nl', 'Netherlands'], ['it', 'Italy'], ['es', 'Spain']],
+      policy: [['no', 'Norway', 0], ['us', 'United States', 1], ['ea', 'Euro area', 2], ['gb', 'United Kingdom', 5], ['ch', 'Switzerland', 7]],
+      yields: [['no', 'Norway', 0], ['us', 'United States', 1], ['de', 'Germany', 3], ['fr', 'France', 4], ['it', 'Italy', 6], ['gb', 'United Kingdom', 5], ['ch', 'Switzerland', 7]],
+      ratesNote: 'Germany, France and Italy share the euro area’s policy rate, so they appear only among the bond yields. The United Kingdom and Switzerland appear only in this tile.',
+      inflationNote: ' The United States has no current harmonized index, so its figures are the national consumer price index, which includes owner-occupied housing costs. Its core measure excludes food and energy.',
+      employmentNote: ' The United States figure comes from the OECD, covers ages 16 to 64 and has no series for ages 20 to 64.',
+      tfpNote: 'TFP needs a capital stock, which ends earlier than the other series for some countries. For the United States, output is real GDP and the capital stock comes from the Bureau of Economic Analysis.',
     },
   };
   function compareDefs(block) {
@@ -319,14 +324,14 @@
     return [
       mk('gdp', {
         title: 'GDP',
-        desc: `Gross domestic product in Norway and ${B.others}. Volumes, seasonally and calendar adjusted, from Eurostat. Norway is shown as Mainland Norway, from Statistics Norway, because the total economy moves with oil and gas production. The total is available as a dashed line. The index is set to 100 in the fourth quarter of 2019.`,
+        desc: `Gross domestic product in Norway and ${B.others}. Volumes, seasonally and calendar adjusted, from Eurostat${block === 'europe' ? ', and from the Bureau of Economic Analysis for the United States' : ''}. Norway is shown as Mainland Norway, from Statistics Norway, because the total economy moves with oil and gas production. The total is available as a dashed line. The index is set to 100 in the fourth quarter of 2019.`,
         compare: { rows: rows(M, 'yoy'), fmt: (v) => fmt.signedPct(v), sub: 'volume growth from a year earlier' }, sparks: rows(M, 'index'),
         views: [...views(M, 'index', 'Index, Q4 2019 = 100', { on: true }), ...views(M, 'yoy', 'Growth from a year earlier', { tip: 'y/y' }), ...views(M, 'qoq', 'Quarter-on-quarter growth', { tip: 'q/q' })],
         defaultYears: 10,
       }),
       mk('inflation', {
         title: 'Inflation',
-        desc: 'Twelve-month change in the harmonized index of consumer prices (HICP), which is compiled on the same definitions in every country and published by Eurostat. It differs from the national consumer price index in the inflation tile at the top of the page, mainly because it leaves out owner-occupied housing costs. The headline is core inflation, i.e. the HICP excluding energy, food, alcohol and tobacco. Dashed lines show the HICP for all items.',
+        desc: 'Twelve-month change in the harmonized index of consumer prices (HICP), which is compiled on the same definitions in every country and published by Eurostat. It differs from the national consumer price index in the inflation tile at the top of the page, mainly because it leaves out owner-occupied housing costs. The headline is core inflation, i.e. the HICP excluding energy, food, alcohol and tobacco. Dashed lines show the HICP for all items.' + B.inflationNote,
         compare: { rows: rows(C, 'core'), fmt: (v) => fmt.pct(v), sub: 'core HICP, 12-month change' }, sparkZero: true,
         views: [...views(C, 'core', 'Core: excluding energy, food, alcohol and tobacco', { on: true, tip: 'core' }), ...views(C, 'hicp', 'HICP, all items', { dash: true, tip: 'all items' })],
         defaultYears: 10,
@@ -347,19 +352,20 @@
       }),
       mk('employment', {
         title: 'Employment',
-        desc: 'Employed persons as a share of the population aged 20 to 64, seasonally adjusted. The figures come from each country’s labor force survey as harmonized by Eurostat, and start in 2009 for most countries. Dashed lines show the rate for ages 15 to 64.',
-        compare: { rows: rows(C, 'rate2064'), fmt: (v) => fmt.pct(v), sub: 'employment rate, ages 20–64' },
-        views: [...views(C, 'rate2064', 'Ages 20–64', { on: true }), ...views(C, 'rate1564', 'Ages 15–64', { dash: true, tip: 'ages 15–64' })],
+        desc: 'Employed persons as a share of the population aged 15 to 64, seasonally adjusted. The figures come from each country’s labor force survey as harmonized by Eurostat, and start in 2009 for most countries. Dashed lines show the rate for ages 20 to 64.' + B.employmentNote,
+        compare: { rows: rows(C, 'rate1564'), fmt: (v) => fmt.pct(v), sub: 'employment rate, ages 15–64' },
+        views: [...views(C, 'rate1564', 'Ages 15–64', { on: true }), ...views(C, 'rate2064', 'Ages 20–64', { dash: true, tip: 'ages 20–64' })],
         defaultYears: 20,
       }),
       mk('productivity', {
         title: 'Productivity',
-        desc: 'Total factor productivity and labor productivity (value added per hour worked), computed from each country’s national accounts with the same method as in the productivity tile for Mainland Norway. TFP growth comes from growth accounting, weighting hours and capital by the labor share observed in each country’s national accounts. Norway is shown as Mainland Norway because oil and gas production distorts the total. The total is available as a dashed line. The indices are set to 100 in 2000. TFP needs a capital stock, which ends earlier than the other series for some countries and is missing for Iceland and Switzerland.',
+        desc: 'Total factor productivity and labor productivity (value added per hour worked), computed from each country’s national accounts with the same method as in the productivity tile for Mainland Norway. TFP growth comes from growth accounting, weighting hours and capital by the labor share observed in each country’s national accounts. Norway is shown as Mainland Norway because oil and gas production distorts the total. The total is available as a dashed line. The indices are set to 100 in 2000. ' + B.tfpNote,
         compare: { rows: rows(M, 'tfpg'), fmt: (v) => fmt.signedPct(v), sub: 'total factor productivity growth' }, sparks: rows(M, 'tfp'),
         views: [...views(M, 'tfp', 'Total factor productivity, index 2000 = 100', { on: true, tip: 'TFP' }), ...views(M, 'lp', 'Labor productivity, index 2000 = 100', { tip: 'labor productivity' }),
                 ...views(M, 'tfpg', 'TFP growth', { tip: 'TFP growth' }), ...views(M, 'lpg', 'Labor productivity growth', { tip: 'labor productivity growth' }),
                 ...views(M, 'share', 'Labor share used as weight', { tip: 'labor share' })],
         defaultYears: 30, showMethod: true,
+        averages: { title: 'Average annual growth by country', measures: [{ prefix: 'tfpg', label: 'TFP' }, { prefix: 'lpg', label: 'Labor productivity' }], countries: M, years: 10 },
       }),
     ];
   }
@@ -493,14 +499,14 @@
   // ------------------------------------------------------------------ detail dialog
   const dlg = document.getElementById('detail');
   const inner = document.getElementById('d-inner');
-  let chart = null, chart2 = null, bdCharts = [], state = null;
+  let chart = null, chart2 = null, avgChart = null, bdCharts = [], state = null;
 
   dlg.addEventListener('close', () => { destroyCharts(); if (location.hash) history.replaceState(null, '', location.pathname + location.search); });
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
   window.addEventListener('hashchange', openFromHash);
   // #id opens a tile; #id=seriesA,seriesB opens it with those series switched on
   function openFromHash() { const [id, keys] = location.hash.replace('#', '').split('='); if (id && DEFS.some((d) => d.id === id) && DATA) openDetail(id, true, keys ? keys.split(',') : null); }
-  function destroyCharts() { if (chart) { chart.destroy(); chart = null; } if (chart2) { chart2.destroy(); chart2 = null; } bdCharts.forEach((c) => c.destroy()); bdCharts = []; }
+  function destroyCharts() { if (chart) { chart.destroy(); chart = null; } if (chart2) { chart2.destroy(); chart2 = null; } if (avgChart) { avgChart.destroy(); avgChart = null; } bdCharts.forEach((c) => c.destroy()); bdCharts = []; }
 
   function openDetail(id, fromHash, keys) {
     const def = DEFS.find((d) => d.id === id), ind = DATA.indicators[id];
@@ -521,6 +527,7 @@
     drawChart();
     drawTable();
     if (def.second) drawSecond();
+    if (def.averages) initAverages();
     if (ind.breakdowns) drawBreakdowns(ind.breakdowns);
     if (ind.scatters) drawScatters(ind.scatters);
     dlg.scrollTop = 0;
@@ -599,6 +606,16 @@
       <div class="d-chart"><canvas id="d-canvas" role="img" aria-label="${def.title} chart"></canvas></div>
       <div class="d-legend" id="d-legend"></div>
       <div class="d-table-wrap" id="d-table" hidden></div>
+      ${def.averages ? `<div class="d-second">
+        <h3>${def.averages.title}</h3>
+        <div class="d-controls">
+          <div class="group"><span class="label">Measure</span>${def.averages.measures.map((m) => `<button class="pill" type="button" data-avg-measure="${m.prefix}" aria-pressed="false">${m.label}</button>`).join('')}</div>
+          <div class="group"><span class="label">Period</span><label class="yr">From <select id="d-avg-from" aria-label="First year"></select></label><label class="yr">to <select id="d-avg-to" aria-label="Last year"></select></label>
+            ${[5, 10, 20, 0].map((n) => `<button class="pill" type="button" data-avg-last="${n}" aria-pressed="false">${n ? `Last ${n} y` : 'All years'}</button>`).join('')}</div>
+        </div>
+        <p class="d-sub" id="d-avg-sub"></p>
+        <div class="d-chart" id="d-avg-box"><canvas id="d-avg-canvas" role="img" aria-label="${def.averages.title}"></canvas></div>
+      </div>` : ''}
       ${def.second ? `<div class="d-second"><h3>${def.second.title}</h3><div class="d-chart"><canvas id="d-canvas2" role="img" aria-label="${def.second.title}"></canvas></div></div>` : ''}
       ${(ind.breakdowns || []).map((b, i) => `<div class="d-second"><h3>${b.title}</h3><p class="d-sub">${b.subtitle}</p><div class="d-chart" style="height:${b.items.length * (window.innerWidth < 700 ? 40 : 28) + 60}px"><canvas id="d-bd-${i}" role="img" aria-label="${b.title}"></canvas></div></div>`).join('')}
       ${(ind.scatters || []).map((b, i) => `<div class="d-second"><h3>${b.title}</h3><p class="d-sub">${b.subtitle}</p><div class="d-chart" style="height:440px"><canvas id="d-sc-${i}" role="img" aria-label="${b.title}"></canvas></div></div>`).join('')}
@@ -763,6 +780,77 @@
       + avgs.map(({ d, mean, from, to }) =>
         `<span><span class="sw line" style="background:repeating-linear-gradient(90deg, var(${SLOTS[d.slot % 8]}) 0 4px, transparent 4px 7px)"></span>${d.label}: average ${from}–${to}, ${fmt.num(mean, d.s.decimals)}${unitShort(d.unit) ? ' ' + unitShort(d.unit) : ''}</span>`).join('');
     if (state.table) drawTable();
+  }
+
+  // Average annual growth per country over a period the reader chooses (def.averages): one bar per country, in the country's color.
+  // The average is a compound rate, i.e. the mean of the log changes. A country without figures for the whole period is
+  // averaged over the years it has, and those years are written next to its name.
+  function avgYearSpan() {
+    const ys = [];
+    state.def.averages.countries.forEach((c) => { const s = state.ind.series[`${state.avg.measure}_${c.key}`]; if (s) s.periods.forEach((p, i) => { if (s.values[i] != null) ys.push(+p); }); });
+    return [Math.min(...ys), Math.max(...ys)];
+  }
+  function setAvgPeriod(last) {   // last: number of years ending in the latest year, 0 for all years, null to keep the choice within the available span
+    const [lo, hi] = avgYearSpan(), a = state.avg;
+    if (last != null) { a.to = hi; a.from = last ? Math.max(lo, hi - last + 1) : lo; }
+    a.from = Math.min(Math.max(a.from, lo), hi); a.to = Math.min(Math.max(a.to, lo), hi);
+    if (a.from > a.to) [a.from, a.to] = [a.to, a.from];
+  }
+  function initAverages() {
+    const A = state.def.averages;
+    state.avg = { measure: A.measures[0].prefix, from: 0, to: 0 };
+    setAvgPeriod(A.years);
+    inner.querySelectorAll('[data-avg-measure]').forEach((b) => b.addEventListener('click', () => { state.avg.measure = b.dataset.avgMeasure; setAvgPeriod(null); drawAverages(); }));
+    inner.querySelectorAll('[data-avg-last]').forEach((b) => b.addEventListener('click', () => { setAvgPeriod(+b.dataset.avgLast); drawAverages(); }));
+    ['from', 'to'].forEach((k) => document.getElementById('d-avg-' + k).addEventListener('change', (e) => { state.avg[k] = +e.target.value; setAvgPeriod(null); drawAverages(); }));
+    drawAverages();
+  }
+  function drawAverages() {
+    const A = state.def.averages, a = state.avg, [lo, hi] = avgYearSpan();
+    const what = A.measures.find((m) => m.prefix === a.measure).label;
+    const years = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+    ['from', 'to'].forEach((k) => { document.getElementById('d-avg-' + k).innerHTML = years.map((y) => `<option value="${y}"${y === a[k] ? ' selected' : ''}>${y}</option>`).join(''); });
+    inner.querySelectorAll('[data-avg-measure]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.avgMeasure === a.measure)));
+    inner.querySelectorAll('[data-avg-last]').forEach((b) => { const n = +b.dataset.avgLast; b.setAttribute('aria-pressed', String(a.to === hi && a.from === (n ? Math.max(lo, hi - n + 1) : lo))); });
+    const missing = [];
+    const rows = A.countries.map((c) => {
+      const s = state.ind.series[`${a.measure}_${c.key}`];
+      const obs = s ? s.periods.map((p, i) => [+p, s.values[i]]).filter(([y, v]) => v != null && y >= a.from && y <= a.to) : [];
+      if (!obs.length) { missing.push(c.label); return null; }
+      const mean = (Math.exp(obs.reduce((sum, [, v]) => sum + Math.log(1 + v / 100), 0) / obs.length) - 1) * 100;
+      const y0 = obs[0][0], y1 = obs[obs.length - 1][0];
+      return { c, mean, n: obs.length, label: c.label + (y0 !== a.from || y1 !== a.to ? ` (${y0 === y1 ? y0 : `${y0}–${y1}`})` : '') };
+    }).filter(Boolean).sort((x, y) => y.mean - x.mean);
+    document.getElementById('d-avg-sub').textContent = `${what} growth per year, averaged over ${a.from === a.to ? a.from : `${a.from} to ${a.to}`} as a compound rate. A country without figures for the whole period is averaged over the years in parentheses.`
+      + (missing.length ? ` No figures in this period for ${missing.join(' and ')}.` : '');
+    const ink = cssVar('--viz-ink-2'), grid = cssVar('--viz-grid'), narrow = window.innerWidth < 700;
+    const fill = (c) => { const hex = cssVar(SLOTS[c.slot]).replace('#', ''); return c.dash && hex.length === 6 ? `rgba(${[0, 2, 4].map((k) => parseInt(hex.slice(k, k + 2), 16)).join(', ')}, 0.45)` : '#' + hex; };
+    const vals = rows.map((r) => r.mean), top = Math.max(0, ...vals), bottom = Math.min(0, ...vals), pad = Math.max(top - bottom, 0.2) * 0.14;
+    const endLabels = {
+      id: 'avgLabels',
+      afterDatasetsDraw(c) {
+        const ctx = c.ctx;
+        ctx.save(); ctx.fillStyle = cssVar('--viz-ink'); ctx.font = `11px ${Chart.defaults.font.family}`; ctx.textBaseline = 'middle';
+        c.getDatasetMeta(0).data.forEach((bar, i) => { const v = rows[i].mean; ctx.textAlign = v < 0 ? 'right' : 'left'; ctx.fillText(`${v > 0 ? '+' : ''}${fmt.num(v, 2)} %`, bar.x + (v < 0 ? -6 : 6), bar.y); });
+        ctx.restore();
+      },
+    };
+    document.getElementById('d-avg-box').style.height = `${rows.length * (narrow ? 38 : 30) + 64}px`;
+    if (avgChart) avgChart.destroy();
+    avgChart = new Chart(document.getElementById('d-avg-canvas').getContext('2d'), {
+      type: 'bar',
+      data: { labels: rows.map((r) => r.label), datasets: [{ data: vals, backgroundColor: rows.map((r) => fill(r.c)), borderRadius: 3, borderSkipped: 'start', barPercentage: 0.72 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false },
+                   tooltip: { callbacks: { title: (items) => rows[items[0].dataIndex].label,
+                                           label: (it) => ` ${what} growth: ${fmt.num(rows[it.dataIndex].mean, 2)} % per year, average of ${rows[it.dataIndex].n} year${rows[it.dataIndex].n === 1 ? '' : 's'}` } } },
+        scales: { x: { suggestedMin: bottom - (bottom < 0 ? pad : 0), suggestedMax: top + pad, grid: { color: (c) => (c.tick.value === 0 ? cssVar('--viz-axis') : grid) }, ticks: { color: ink, font: { size: 11 } }, border: { display: false },
+                       title: { display: true, text: 'percent per year', color: ink, font: { size: 11 } } },
+                  y: { grid: { display: false }, ticks: { color: ink, font: { size: 11 } }, border: { color: cssVar('--viz-axis') } } },
+      },
+      plugins: [endLabels],
+    });
   }
 
   // Horizontal bar charts for one-year breakdowns (ind.breakdowns): items sorted by size, value written at the end of each bar

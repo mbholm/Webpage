@@ -62,8 +62,8 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 
 A one-page dashboard of Norwegian macro indicators (GDP, consumption, investment, inflation, unemployment, employment, labor market tightness, interest
 rates, the krone, trade balance, current account, the oil fund, the government budget, house prices, credit, inequality,
-productivity, wages and labor shares), followed by two blocks that compare Norway with the Nordic countries and with European
-countries (GDP, inflation, interest rates, unemployment, employment and productivity in each). Three files:
+productivity, wages and labor shares), followed by two blocks that compare Norway with the Nordic countries and with Europe
+and the US (GDP, inflation, interest rates, unemployment, employment and productivity in each). Three files:
 
 - `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
   (SDMX API), Eurostat (JSON API), the BIS and the OECD (SDMX APIs), NAV, NBIM and the Ministry of Finance, computes the derived series (TFP, labor productivity,
@@ -132,6 +132,18 @@ The comparison blocks (`CMP_*` and `cmp_*` in the build script, `BLOCKS` and `co
   `nama_10_a10`, hours `nama_10_a10_e`, net capital stock `nama_10_nfa_st`, income `nama_10_gdp`). Countries
   without a capital stock at constant prices (Iceland, Switzerland) get labor productivity only. Norway's total
   economy uses Statistics Norway's tables instead, because the capital stock Eurostat has for Norway ends in 2022.
+- A block holds at most eight countries, one per color in the chart palette. That is why Switzerland is not in
+  the block with Europe and the US (it appears only in its interest rate tile, as does the United Kingdom).
+- The United States (`us_series` in the build script): Eurostat has it only for unemployment. Real GDP and the
+  consumer price index come from FRED's chart download (`fredgraph.csv`, no key), the employment rate for ages
+  15–64 is the OECD's series through FRED, and productivity uses real GDP (FRED), total hours and income
+  components (OECD) and the quantity index for the net stock of fixed assets from the Bureau of Economic
+  Analysis' flat file (`FixedAssets.txt`, about 16 MB, read as a stream). United States inflation is the national
+  CPI, not a harmonized index. If one of these sources fails, the United States series from the previous run
+  are kept and the reason is written under `us_kept` in that indicator.
+- The productivity tiles have a bar chart of average annual growth per country (`averages` in the tile's
+  definition, `drawAverages` in `dashboard.js`). The reader picks the measure and the first and last year. The
+  average is a compound rate computed in the browser from the annual growth series.
 - Eurostat's unit codes carry the reference year (`CLV_I20`, `CLV20_MNAC`). When Eurostat moves to a new
   reference year the codes in `CMP_EUROSTAT` must be updated. The tiles show a warning when that happens.
 - Eurostat's euro area code differs between datasets (`EA`, `EA20`, `EA21`). The script takes the one with the

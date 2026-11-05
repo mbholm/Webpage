@@ -99,6 +99,8 @@ body.wide main { max-width: 1180px; padding-left: 3rem; padding-right: 3rem; }
 .tiles.nordic .t-spark, .tiles.europe .t-spark { height: 56px; }
 .tile .t-spark .cline { fill: none; stroke-width: 1.2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: .9; }
 .tile .t-spark .cline.first { stroke-width: 2.2; opacity: 1; }
+.d-controls label.yr { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--muted); }
+.d-controls select { font: inherit; font-size: .82rem; padding: .22rem .4rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
 .d-statlabel { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 0 0 .5rem; }
 
 /* ---------- Detail dialog ---------- */
