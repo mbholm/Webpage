@@ -569,25 +569,26 @@ NBIM_COST_BP = {1998: 5.1, 1999: 8.7, 2000: 10.9, 2001: 7.4, 2002: 9.1, 2003: 10
                 2008: 10.6, 2009: 13.8, 2010: 10.5, 2011: 8.1, 2012: 6.2, 2013: 6.6, 2014: 5.9, 2015: 5.7, 2016: 5.2, 2017: 6.0}
 
 
-def ind_oil_fund(gdp: dict | None) -> dict:
-    url = "https://www.nbim.no/en/investments/the-funds-value/"
+def nbim_chart_blocks(url: str) -> list[dict[str, tuple[list, list]]]:
+    """Chart data embedded in an NBIM page: one dict per chart, {series name: (years, values)}. NBIM has no data API."""
     html = http_get(url, headers={"User-Agent": "Mozilla/5.0"}).decode("utf-8", "ignore")
-    blocks = [b for b in re.findall(r"<script[^>]*>(.*?)</script>", html, re.S) if "Date.UTC" in b]
-
-    def parse_series(block: str) -> dict[str, tuple[list, list]]:
-        out = {}
+    out = []
+    for block in re.findall(r"<script[^>]*>(.*?)</script>", html, re.S):
+        if "Date.UTC" not in block:
+            continue
+        ser = {}
         for name, arr in re.findall(r"name:\s*['\"]([^'\"]*)['\"][^{}]*?data:\s*(\[[^\]]*(?:\][^\]]*)*?\]\s*\])", block, re.S):
             pts = re.findall(r"Date\.UTC\((\d+),\s*(\d+),\s*(\d+)\)\s*,\s*(-?[\d.]+)", arr)
-            if pts and name not in out:
-                out[name] = ([p[0] for p in pts], [float(p[3]) for p in pts])
-        return out
+            if pts and name not in ser:
+                ser[name] = ([p[0] for p in pts], [float(p[3]) for p in pts])
+        if ser:
+            out.append(ser)
+    return out
 
-    comp = None
-    for b in blocks:
-        ser = parse_series(b)
-        if "Total market value" in ser and "Equity" in ser:
-            comp = ser
-            break
+
+def ind_oil_fund(gdp: dict | None) -> dict:
+    url = "https://www.nbim.no/en/investments/the-funds-value/"
+    comp = next((b for b in nbim_chart_blocks(url) if "Total market value" in b and "Equity" in b), None)
     if comp is None:
         raise RuntimeError("could not find the market-value chart on the NBIM page")
     years, total = comp["Total market value"]
@@ -638,8 +639,38 @@ def ind_oil_fund(gdp: dict | None) -> dict:
             p, v = series[key]["periods"], series[key]["values"]
             series["share_" + key] = S(f"{name}, share of the fund", "percent of market value", "A", p,
                                        [None if (x is None or not value.get(y)) else round(100 * x / value[y], 1) for y, x in zip(p, v)], 1, derived=True)
+    # Returns and relative return (the fund's return minus the benchmark's), from the charts on NBIM's returns page.
+    # The series names are NBIM's own and must match the page.
+    ret_url = "https://www.nbim.no/en/investments/returns/"
+    rblocks = nbim_chart_blocks(ret_url)
+
+    def pick(name):
+        for b in rblocks:
+            if name in b:
+                return b[name]
+        raise RuntimeError(f"NBIM returns page: no chart series named {name!r}")
+
+    def since_start(yrs, vals):   # an asset class is reported as zero before it entered the fund
+        i = next((k for k, v in enumerate(vals) if v != 0), len(vals))
+        return yrs[i:], vals[i:]
+
+    series["return"] = S("Annual return on the fund", "percent", "A", *pick("Annual return"), 2)
+    series["return_accum"] = S("Accumulated annualized return since 1998", "percent", "A", *pick("Accumulated annualised return"), 2)
+    series["relative_return"] = S("Annual relative return, fund minus benchmark index", "percentage points", "A", *pick("Annual relative return"), 2)
+    series["relative_return_accum"] = S("Accumulated annualized relative return since 1998", "percentage points", "A", *pick("Accumulated annualised relative return"), 2)
+    classes = next((b for b in rblocks if "Unlisted real estate" in b and "Equity" in b), None)
+    if classes is None:
+        raise RuntimeError("NBIM returns page: no chart with returns by asset class")
+    for key, name, lab in (("return_equity", "Equity", "Equity"), ("return_fixed_income", "Fixed income", "Fixed income"),
+                           ("return_real_estate", "Unlisted real estate", "Unlisted real estate"),
+                           ("return_renewables", "Unlisted renewable infrastructure", "Unlisted renewable energy infrastructure")):
+        if name in classes:
+            series[key] = S(f"{lab}, annual return", "percent", "A", *since_start(*classes[name]), 2)
     return {"series": series,
-            "sources": [src("Norges Bank Investment Management, the fund's value", None, url, None,
+            "sources": [src("Norges Bank Investment Management, returns", None, ret_url, None,
+                            "Returns are measured in the fund's currency basket, before management costs. The relative return is the fund's return minus "
+                            "the return on the benchmark index set by the Ministry of Finance."),
+                        src("Norges Bank Investment Management, the fund's value", None, url, None,
                             "Year-end values read from the chart on NBIM's page. NBIM publishes no open data API."),
                         src("Norges Bank Investment Management, annual reports", None, "https://www.nbim.no/en/news-and-insights/reports/", None,
                             "Management costs are not published as data. The figures are transcribed from the annual reports and updated once a year.")]}
@@ -958,6 +989,61 @@ def ind_productivity() -> dict:
                         src("Statistics Norway, fixed capital by industry", "09181", "https://www.ssb.no/en/statbank/table/09181", mk["updated"]),
                         src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", mn["updated"])]}
 
+# --------------------------------------------------------------------------- consumption, investment and credit
+
+QNA_DEMAND = ["koh.nr61_", "koh.nr61vare", "koh.nr61tjen", "koh.nr61L8", "koo.nroff",
+              "bif.nr83_6fn", "bif.nr83_6", "bif.nr83naer", "bif.nr8368", "bif.nr84_5", "bif.nr83oljroer"]
+_QNA_DEMAND = None
+
+
+def demand_series(items: list[tuple[str, str, str]]) -> tuple[dict, dict]:
+    """Quarter-on-quarter growth, growth from a year earlier and the level for demand components of the quarterly national accounts (SSB 09190)."""
+    global _QNA_DEMAND
+    if _QNA_DEMAND is None:
+        _QNA_DEMAND = ssb_series(ssb_data("09190", [("Makrost", QNA_DEMAND), ("ContentsCode", ["FastePriserSesJust", "VolumEndrSesJust", "Volum"]), ("Tid", ["from(1995K1)"])]))
+    per, s, m = _QNA_DEMAND
+    series = {}
+    for key, code, lab in items:
+        series[key + "_qoq"] = S(f"{lab}, quarter-on-quarter volume growth (seasonally adjusted)", "percent", "Q", per, s[(code, "VolumEndrSesJust")], 1)
+    for key, code, lab in items:
+        series[key + "_yoy"] = S(f"{lab}, volume growth from same quarter a year earlier", "percent", "Q", per, s[(code, "Volum")], 1)
+    for key, code, lab in items:
+        series[key + "_level"] = S(f"{lab}, volume per quarter (constant 2023 prices, seasonally adjusted)", "NOK million", "Q", per, s[(code, "FastePriserSesJust")], 0)
+    return series, src("Statistics Norway, quarterly national accounts", "09190", "https://www.ssb.no/en/statbank/table/09190", m["updated"], "Figures after the base year are preliminary.")
+
+
+def ind_consumption() -> dict:
+    series, source = demand_series([("households", "koh.nr61_", "Household consumption"), ("goods", "koh.nr61vare", "Household consumption of goods"),
+                                    ("services", "koh.nr61tjen", "Household consumption of services"), ("abroad", "koh.nr61L8", "Household purchases abroad"),
+                                    ("government", "koo.nroff", "General government consumption")])
+    return {"series": series, "sources": [source]}
+
+
+def ind_investment() -> dict:
+    series, source = demand_series([("mainland", "bif.nr83_6fn", "Investment, Mainland Norway"), ("total", "bif.nr83_6", "Investment, total"),
+                                    ("business", "bif.nr83naer", "Business investment, Mainland Norway"), ("housing", "bif.nr8368", "Housing investment"),
+                                    ("government", "bif.nr84_5", "General government investment"), ("petroleum", "bif.nr83oljroer", "Petroleum investment")])
+    return {"series": series, "sources": [source]}
+
+
+def ind_credit() -> dict:
+    per, s, m = ssb_series(ssb_data("11599", [("Valuta", ["00"]), ("Lantaker2", ["Kred01", "Kred02", "Kred03", "Kred04"]),
+                                               ("ContentsCode", ["AarsTrans2", "Bruttogjeld"]), ("Tid", ["from(1990M01)"])]))
+    pq, sq, mq = ssb_series(ssb_data("09477", [("Justering", ["S"]), ("ContentsCode", ["Gjeldsrate"]), ("Tid", ["from(1996K4)"])]))
+    sectors = (("households", "Kred04", "households"), ("corporations", "Kred03", "non-financial corporations"),
+               ("municipalities", "Kred02", "municipalities"), ("total", "Kred01", "all three sectors (C2)"))
+    series = {}
+    for key, code, lab in sectors:
+        series["growth_" + key] = S(f"Domestic loan debt, {lab}, 12-month growth", "percent", "M", per, s[("00", code, "AarsTrans2")], 1)
+    for key, code, lab in sectors:
+        series["debt_" + key] = S(f"Domestic loan debt, {lab}", "NOK million", "M", per, s[("00", code, "Bruttogjeld")], 0)
+    series["debt_income"] = S("Household debt as a share of disposable income (seasonally adjusted)", "percent of disposable income", "Q", pq, sq[("S", "Gjeldsrate")], 1)
+    return {"series": series,
+            "sources": [src("Statistics Norway, credit indicator (domestic loan debt)", "11599", "https://www.ssb.no/en/statbank/table/11599", m["updated"],
+                            "Growth rates are adjusted for exchange rate changes, statistical breaks and, from 2019, confirmed losses."),
+                        src("Statistics Norway, financial accounts, household ratios", "09477", "https://www.ssb.no/en/statbank/table/09477", mq["updated"])]}
+
+
 # --------------------------------------------------------------------------- government budget (Nasjonalbudsjettet, regjeringen.no)
 
 BUDGET_LABELS = {   # table labels on regjeringen.no -> English
@@ -1060,19 +1146,23 @@ def ind_budget() -> dict:
     """Fiscal policy from the latest Nasjonalbudsjett: the published data behind the figures (Excel) and the state budget's
     revenue and expenditure table. No API: the pages are found from the budget's hub page for the newest year available."""
     base = "https://www.regjeringen.no"
-    ua = {"User-Agent": "Mozilla/5.0"}
+    ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "nb-NO,nb;q=0.9,en;q=0.8"}
     this_year = datetime.now(timezone.utc).year
     hub = year = None
+    tried = []
     for y in (this_year + 1, this_year, this_year - 1):
         try:
             hub = http_get(f"{base}/no/statsbudsjett/{y}/", headers=ua).decode("utf-8", "ignore")
-        except Exception:
+        except Exception as e:
+            tried.append(f"{y}: {type(e).__name__} {e}")
             continue
         if "tallene-bak-figurene" in hub:
             year = y
             break
+        tried.append(f"{y}: page without data links ({len(hub)} bytes)")
     if year is None:
-        raise RuntimeError("no budget hub page with data links found on regjeringen.no")
+        raise RuntimeError("no budget hub page with data links found on regjeringen.no (" + ", ".join(tried) + ")")
 
     def link(pattern):
         m = re.search(r'href="(/no/statsbudsjett/%d/%s[^"]*)"' % (year, pattern), hub)
@@ -1151,8 +1241,11 @@ def main() -> int:
             previous = {}
     indicators: dict = {}
     errors: dict = {}
+    kept: dict = {}
 
-    def run(key, fn, *args):
+    def run(key, fn, *args, keep_quietly=False):
+        """keep_quietly: if the fetch fails and earlier data exists, keep it without reporting an error on the page.
+        For sources that change a few times a year and that the build server may not be able to reach."""
         try:
             d = fn(*args)
             d["fetched"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -1160,6 +1253,13 @@ def main() -> int:
             n = sum(len(s["periods"]) for s in d["series"].values())
             print(f"  ok   {key:16} {len(d['series'])} series, {n} points")
         except Exception as e:  # keep the previous data for this indicator
+            if keep_quietly and key in previous:
+                kept[key] = f"{type(e).__name__}: {e}"
+                indicators[key] = previous[key]
+                indicators[key].pop("stale", None)
+                indicators[key].pop("error", None)
+                print(f"  kept {key:16} from {previous[key].get('fetched', 'an earlier run')} ({kept[key]})")
+                return
             errors[key] = f"{type(e).__name__}: {e}"
             print(f"  FAIL {key:16} {errors[key]}", file=sys.stderr)
             traceback.print_exc(limit=2)
@@ -1170,6 +1270,8 @@ def main() -> int:
 
     print("Fetching dashboard data ...")
     run("gdp", ind_gdp)
+    run("consumption", ind_consumption)
+    run("investment", ind_investment)
     gdp = indicators.get("gdp")
     proj = None
     try:
@@ -1186,14 +1288,15 @@ def main() -> int:
     run("trade", ind_trade)
     run("current_account", ind_current_account, gdp)
     run("oil_fund", ind_oil_fund, gdp)
-    run("budget", ind_budget)
+    run("budget", ind_budget, keep_quietly=True)   # regjeringen.no does not answer GitHub's servers
     run("house_prices", ind_house_prices)
+    run("credit", ind_credit)
     run("productivity", ind_productivity)
     run("wages", ind_wages)
     run("labor_shares", ind_labor_shares)
 
     OUT.parent.mkdir(exist_ok=True)
-    payload = {"generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "errors": errors, "indicators": indicators}
+    payload = {"generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "errors": errors, "kept": kept, "indicators": indicators}
     OUT.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"wrote {OUT.relative_to(ROOT)} ({OUT.stat().st_size/1024:.0f} kB), {len(indicators)} indicators, {len(errors)} errors")
     return 0 if not errors else (0 if indicators else 1)

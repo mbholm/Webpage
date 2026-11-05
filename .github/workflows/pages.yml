@@ -4,7 +4,11 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "20 6 * * *"   # every morning 06:20 UTC: refresh the dashboard data and redeploy
+    # Every morning at 08:30 Norwegian time: refresh the dashboard data and redeploy.
+    # GitHub's clock is UTC and ignores daylight saving time, so there is one entry for summer time
+    # (06:30 UTC) and one for winter time (07:30 UTC). The "gate" job lets only the right one through.
+    - cron: "30 6 * * *"
+    - cron: "30 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -17,7 +21,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.check.outputs.go }}
+    steps:
+      - id: check
+        name: Let a scheduled run through only if it is the 08:30 one in Norway
+        run: |
+          go=true
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            offset=$(TZ=Europe/Oslo date +%z)
+            if [ "${{ github.event.schedule }}" = "30 6 * * *" ] && [ "$offset" != "+0200" ]; then go=false; fi
+            if [ "${{ github.event.schedule }}" = "30 7 * * *" ] && [ "$offset" = "+0200" ]; then go=false; fi   # also runs if the time zone lookup fails
+          fi
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -52,6 +52,28 @@
       defaultYears: 10,
     },
     {
+      id: 'consumption', title: 'Consumption', kicker: 'Activity', goodUp: true,
+      desc: 'Household consumption and general government consumption from the quarterly national accounts. Volumes at constant 2023 prices, seasonally adjusted. The latest quarters are preliminary.',
+      headline: { series: 'households_qoq', fmt: (v) => fmt.signedPct(v), sub: 'household consumption, quarter-on-quarter, s.a.' },
+      secondary: [{ series: 'households_yoy', label: 'y/y', fmt: fmt.signedPct }],
+      spark: 'households_qoq', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
+      views: [['qoq', 'Quarter-on-quarter growth', 'bar'], ['yoy', 'Growth from a year earlier', 'line'], ['level', 'Level per quarter, constant prices', 'line']].flatMap(([suffix, group, kind]) =>
+        [['households', 'Households'], ['goods', 'Goods'], ['services', 'Services'], ['abroad', 'Purchases abroad'], ['government', 'General government']]
+          .map(([k, t]) => ({ s: `${k}_${suffix}`, short: t, tip: `${t}, ${suffix === 'qoq' ? 'q/q' : suffix === 'yoy' ? 'y/y' : 'level'}`, kind, on: k === 'households' && suffix !== 'level', group }))),
+      defaultYears: 10,
+    },
+    {
+      id: 'investment', title: 'Investment', kicker: 'Activity', goodUp: true,
+      desc: 'Gross fixed capital formation from the quarterly national accounts. Mainland investment excludes petroleum extraction, pipeline transport and ocean shipping, and is split into business, housing and general government investment. Volumes at constant 2023 prices, seasonally adjusted. Quarterly investment figures are volatile and the latest quarters are preliminary.',
+      headline: { series: 'mainland_qoq', fmt: (v) => fmt.signedPct(v), sub: 'mainland investment, quarter-on-quarter, s.a.' },
+      secondary: [{ series: 'mainland_yoy', label: 'y/y', fmt: fmt.signedPct }],
+      spark: 'mainland_yoy', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
+      views: [['yoy', 'Growth from a year earlier', 'line'], ['qoq', 'Quarter-on-quarter growth', 'bar'], ['level', 'Level per quarter, constant prices', 'line']].flatMap(([suffix, group, kind]) =>
+        [['mainland', 'Mainland Norway'], ['business', 'Business'], ['housing', 'Housing'], ['government', 'General government'], ['petroleum', 'Petroleum'], ['total', 'Total']]
+          .map(([k, t]) => ({ s: `${k}_${suffix}`, short: t, tip: `${t}, ${suffix === 'qoq' ? 'q/q' : suffix === 'yoy' ? 'y/y' : 'level'}`, kind, on: k === 'mainland' && suffix === 'yoy', group }))),
+      defaultYears: 10,
+    },
+    {
       id: 'inflation', title: 'Inflation', kicker: 'Prices', goodUp: null,
       desc: 'Twelve-month change in the consumer price index (CPI) and in CPI-ATE, the index adjusted for tax changes and excluding energy products that Norges Bank uses as its core measure. The inflation target is 2 percent. Dashed lines are Norges Bank’s quarterly projections from the latest Monetary Policy Report.',
       headline: { series: 'cpi_yoy', fmt: (v) => fmt.pct(v), sub: 'CPI, 12-month change' },
@@ -120,7 +142,7 @@
     },
     {
       id: 'oil_fund', title: 'The oil fund', kicker: 'Government Pension Fund Global', goodUp: true,
-      desc: 'Market value of the Government Pension Fund Global at year-end, by asset class, as published by NBIM. The current year shows the latest value NBIM has published, not a year-end value. The asset classes are also shown as shares of the fund. Management costs are the annual costs of running the fund, as a share of assets under management and in kroner.',
+      desc: 'Market value of the Government Pension Fund Global at year-end, by asset class, as published by NBIM. The current year shows the latest value NBIM has published, not a year-end value. The asset classes are also shown as shares of the fund. Returns are measured in the fund’s currency basket before management costs, and the relative return is the fund’s return minus the return on its benchmark index. For the current year the return covers the period NBIM has reported so far. Management costs are the annual costs of running the fund, as a share of assets under management and in kroner.',
       headline: { series: 'value', fmt: (v) => fmt.trnFromBn(v), sub: 'market value', latestLabel: 'latest' },
       secondary: [{ series: 'pct_gdp', label: 'of GDP', fmt: (v) => fmt.pct(v, 0) }],
       spark: 'value', unitLabel: 'NOK bn',
@@ -129,6 +151,10 @@
               { s: 'renewables', short: 'Renewable infrastructure', kind: 'line', group: 'Market value' }, { s: 'pct_gdp', short: 'Total, % of GDP', kind: 'bar', group: 'Market value' },
               { s: 'share_equity', short: 'Equity', kind: 'line', group: 'Share of the fund' }, { s: 'share_fixed_income', short: 'Fixed income', kind: 'line', group: 'Share of the fund' },
               { s: 'share_real_estate', short: 'Real estate', kind: 'line', group: 'Share of the fund' }, { s: 'share_renewables', short: 'Renewable infrastructure', kind: 'line', group: 'Share of the fund' },
+              { s: 'return', short: 'Fund, annual', kind: 'bar', group: 'Return' }, { s: 'return_accum', short: 'Fund, annualized since 1998', kind: 'line', group: 'Return' },
+              { s: 'return_equity', short: 'Equity', kind: 'line', group: 'Return' }, { s: 'return_fixed_income', short: 'Fixed income', kind: 'line', group: 'Return' },
+              { s: 'return_real_estate', short: 'Real estate', kind: 'line', group: 'Return' }, { s: 'return_renewables', short: 'Renewable infrastructure', kind: 'line', group: 'Return' },
+              { s: 'relative_return', short: 'Annual', kind: 'bar', group: 'Relative return against the benchmark' }, { s: 'relative_return_accum', short: 'Annualized since 1998', kind: 'line', group: 'Relative return against the benchmark' },
               { s: 'cost_share', short: 'Share of the fund', kind: 'bar', group: 'Management costs' }, { s: 'costs', short: 'NOK million', kind: 'bar', group: 'Management costs' }],
       defaultYears: 30,
     },
@@ -155,6 +181,19 @@
       views: [{ s: 'yoy', short: 'Norway, y/y', kind: 'line', on: true }, { s: 'yoy_001', short: 'Oslo, y/y', kind: 'line' }, { s: 'yoy_003', short: 'Bergen, y/y', kind: 'line' }, { s: 'yoy_004', short: 'Trondheim, y/y', kind: 'line' },
               { s: 'yoy_002', short: 'Stavanger, y/y', kind: 'line' }, { s: 'qoq', short: 'Norway, q/q s.a.', kind: 'bar' }, { s: 'index', short: 'Index, 2015=100', kind: 'line' }],
       defaultYears: 10,
+    },
+    {
+      id: 'credit', title: 'Credit', kicker: 'Debt', goodUp: null,
+      desc: 'Twelve-month growth in domestic loan debt, Statistics Norway’s credit indicator (C2), for households, non-financial corporations and municipalities. The debt ratio is household debt as a share of disposable income, from the financial accounts.',
+      headline: { series: 'growth_households', fmt: (v) => fmt.pct(v), sub: 'household debt, 12-month growth' },
+      secondary: [{ series: 'growth_total', label: 'all sectors (C2)', fmt: fmt.pct }],
+      spark: 'growth_households', scale: 1 / 1000, unitLabel: 'NOK bn',
+      views: [{ s: 'growth_households', short: 'Households', kind: 'line', on: true, group: '12-month growth' }, { s: 'growth_corporations', short: 'Non-financial corporations', kind: 'line', on: true, group: '12-month growth' },
+              { s: 'growth_municipalities', short: 'Municipalities', kind: 'line', group: '12-month growth' }, { s: 'growth_total', short: 'All sectors (C2)', kind: 'line', on: true, group: '12-month growth' },
+              { s: 'debt_households', short: 'Households', kind: 'line', group: 'Debt outstanding' }, { s: 'debt_corporations', short: 'Non-financial corporations', kind: 'line', group: 'Debt outstanding' },
+              { s: 'debt_municipalities', short: 'Municipalities', kind: 'line', group: 'Debt outstanding' }, { s: 'debt_total', short: 'All sectors (C2)', kind: 'line', group: 'Debt outstanding' },
+              { s: 'debt_income', short: 'Debt, share of disposable income', kind: 'line', group: 'Household debt ratio' }],
+      defaultYears: 20,
     },
     {
       id: 'productivity', title: 'Productivity', kicker: 'Supply side', goodUp: true,
@@ -406,6 +445,7 @@
         ${def.showMethod && ind.method ? `<h4>Method</h4><p class="method">${ind.method}</p>` : ''}
         ${derived ? `<h4>Derived series (own calculations, marked * in legends)</h4><ul>${derived}</ul>` : ''}
         <h4>Sources</h4><ul>${sources}</ul>
+        ${ind.fetched ? `<p class="fetched">Data fetched ${new Date(ind.fetched).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}.</p>` : ''}
         ${ind.stale ? `<p class="warn">The last automatic update of this indicator failed (${ind.error}); figures are from the previous successful fetch.</p>` : ''}
       </div>`;
   }

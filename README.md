@@ -60,8 +60,8 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 
 ### The Norway dashboard (dashboard.html)
 
-A one-page dashboard of Norwegian macro indicators (GDP, inflation, unemployment, employment, interest
-rates, the krone, trade balance, current account, the oil fund, the government budget, house prices,
+A one-page dashboard of Norwegian macro indicators (GDP, consumption, investment, inflation, unemployment, employment, interest
+rates, the krone, trade balance, current account, the oil fund, the government budget, house prices, credit,
 productivity, wages and labor shares). Three files:
 
 - `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
@@ -74,7 +74,7 @@ productivity, wages and labor shares). Three files:
 - `dashboard.css` holds the page's styles, including the chart palette.
 
 The browser cannot query SSB directly (no cross-origin header), so the data is pre-fetched: the deploy
-workflow runs `build_dashboard_data.py` on every push **and every morning at 06:20 UTC** (schedule in
+workflow runs `build_dashboard_data.py` on every push **and every morning at 08:30 Norwegian time** (schedule in
 `.github/workflows/pages.yml`), so the live site refreshes daily without any commits. The committed
 `data/dashboard.json` is the fallback if a fetch fails in CI. To refresh locally:
 
@@ -90,13 +90,19 @@ Sources without an API are read from the publisher's web page, so they break if 
 - **Norges Bank projections** (policy rate, CPI, CPI-ATE): the data workbook of the latest Monetary
   Policy Report, found from the report index page. Quarterly values are plotted at the middle month of
   each quarter and drawn dashed. If the fetch fails, the previous projections are kept.
-- **Oil fund value**: the chart data on NBIM's "The fund's value" page.
+- **Oil fund value, returns and relative return**: the chart data on NBIM's "The fund's value" and
+  "Returns" pages. The relative return is the fund's return minus the benchmark's. NBIM publishes a
+  risk-adjusted alpha only in PDF reports, so it is not on the dashboard.
 - **Government budget**: regjeringen.no. The script opens the budget hub page for the newest year
   (`/no/statsbudsjett/<year>/`), then reads the Excel files behind the figures in Nasjonalbudsjettet
   and the revenue and expenditure table of the state budget. Figures are found by their titles, not
   their numbers, because the numbering changes every year. The tile switches to the new budget by
   itself when it is published in October. The English names of the budget items are in
   `BUDGET_LABELS`. A new item without a translation is shown in Norwegian.
+  **regjeringen.no does not answer GitHub's servers**, so the deploy keeps the budget figures that are
+  in the committed `data/dashboard.json`. To update them (new budget in October), run
+  `python build_dashboard_data.py` on your own computer and push. The reason for a kept indicator is
+  written under `kept` in the JSON.
 - **Oil fund management costs**: NBIM publishes no data series in kroner. The numbers are a hand-kept
   table at the top of `ind_oil_fund` in the build script (`NBIM_COSTS_REPORTED`), transcribed from the
   annual reports ("Total management costs in Norges Bank were X billion kroner"). **Add one line each
@@ -113,6 +119,13 @@ which differs from the paper's centering by a constant only.
 
 A tile can be linked directly: `dashboard.html#inflation` opens it, and
 `dashboard.html#oil_fund=costs` opens it with the named series switched on.
+
+About the daily refresh: GitHub's clock is UTC, so the workflow has one schedule entry for summer time
+and one for winter time, and a small "gate" job that lets through the one that is 08:30 in Norway.
+Scheduled runs can start some minutes late. GitHub switches scheduled workflows off in a repository
+with no commits for 60 days and sends an e-mail first. Any push, or the "Enable workflow" button under
+the Actions tab, turns it back on. Each scheduled run shows up in the Actions tab with the event
+"schedule".
 
 To preview, serve over http (`python -m http.server 8000`); the page loads the JSON with fetch().
 
