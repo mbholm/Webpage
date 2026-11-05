@@ -60,7 +60,7 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 
 ### The Norway dashboard (dashboard.html)
 
-A one-page dashboard of Norwegian macro indicators (GDP, consumption, investment, inflation, unemployment, employment, interest
+A one-page dashboard of Norwegian macro indicators (GDP, consumption, investment, inflation, unemployment, employment, labor market tightness, interest
 rates, the krone, trade balance, current account, the oil fund, the government budget, house prices, credit, inequality,
 productivity, wages and labor shares). Three files:
 
@@ -93,6 +93,9 @@ Sources without an API are read from the publisher's web page, so they break if 
 - **Oil fund value, returns and relative return**: the chart data on NBIM's "The fund's value" and
   "Returns" pages. The relative return is the fund's return minus the benchmark's. NBIM publishes a
   risk-adjusted alpha only in PDF reports, so it is not on the dashboard.
+- **Labor market tightness**: job vacancies (SSB 11587, quarterly from 2010) over unemployed persons, with
+  the Labor Force Survey and NAV as the two denominators. The Beveridge curves are stored under
+  `scatters` in the JSON and drawn as connected scatter charts.
 - **Inequality**: Statistics Norway's tables for the Gini coefficient and wealth shares come through the
   API. The long-run top income and wealth shares are the World Inequality Database's, downloaded as
   CSV from Our World in Data's charts. If that download fails, the last fetched values are kept.

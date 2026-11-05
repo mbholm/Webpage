@@ -97,6 +97,17 @@
       defaultYears: 10,
     },
     {
+      id: 'tightness', title: 'Labor market tightness', kicker: 'Labor market', goodUp: null,
+      desc: 'Job vacancies relative to the number of unemployed. A higher ratio means more jobs chasing fewer job seekers. Vacancies are the stock of unfilled jobs from Statistics Norway’s quarterly vacancy survey, which starts in 2010. The unemployed are counted in two ways: by the Labor Force Survey and by registration with NAV. The Beveridge curves below the chart plot the vacancy rate against the unemployment rate.',
+      headline: { series: 'vu_lfs', fmt: (v) => fmt.num(v, 2), sub: 'vacancies per unemployed person (Labor Force Survey)' },
+      secondary: [{ series: 'vu_nav', label: 'per registered unemployed (NAV)', fmt: (v) => fmt.num(v, 2) }],
+      spark: 'vu_lfs',
+      views: [{ s: 'vu_lfs', short: 'Labor Force Survey unemployed', kind: 'line', on: true, group: 'Vacancies per unemployed person' }, { s: 'vu_nav', short: 'Registered unemployed (NAV)', kind: 'line', on: true, group: 'Vacancies per unemployed person' },
+              { s: 'vacancies', short: 'Vacancies', kind: 'line', group: 'Vacancies' }, { s: 'vacancy_rate', short: 'Vacancy rate', kind: 'line', group: 'Vacancies' },
+              { s: 'unemployed_lfs', short: 'Labor Force Survey', kind: 'line', group: 'Unemployed persons' }, { s: 'unemployed_nav', short: 'Registered (NAV)', kind: 'line', group: 'Unemployed persons' }],
+      defaultYears: 20,
+    },
+    {
       id: 'rates', title: 'Interest rates', kicker: 'Monetary policy', goodUp: null,
       desc: 'Norges Bank’s policy rate (the sight deposit rate), the NOWA overnight money-market rate and generic government yields. Monthly averages give the long history. The daily series cover recent years and cannot be mixed with the monthly ones in the same chart. The dashed line is Norges Bank’s own policy rate forecast from the latest Monetary Policy Report.',
       headline: { series: 'policy_rate_daily', fmt: (v) => fmt.pct(v, 2), sub: 'policy rate' },
@@ -386,6 +397,7 @@
     drawTable();
     if (def.second) drawSecond();
     if (ind.breakdowns) drawBreakdowns(ind.breakdowns);
+    if (ind.scatters) drawScatters(ind.scatters);
     dlg.scrollTop = 0;
   }
 
@@ -456,6 +468,7 @@
       <div class="d-table-wrap" id="d-table" hidden></div>
       ${def.second ? `<div class="d-second"><h3>${def.second.title}</h3><div class="d-chart"><canvas id="d-canvas2" role="img" aria-label="${def.second.title}"></canvas></div></div>` : ''}
       ${(ind.breakdowns || []).map((b, i) => `<div class="d-second"><h3>${b.title}</h3><p class="d-sub">${b.subtitle}</p><div class="d-chart" style="height:${b.items.length * (window.innerWidth < 700 ? 40 : 28) + 60}px"><canvas id="d-bd-${i}" role="img" aria-label="${b.title}"></canvas></div></div>`).join('')}
+      ${(ind.scatters || []).map((b, i) => `<div class="d-second"><h3>${b.title}</h3><p class="d-sub">${b.subtitle}</p><div class="d-chart" style="height:440px"><canvas id="d-sc-${i}" role="img" aria-label="${b.title}"></canvas></div></div>`).join('')}
       ${def.decisions && ind.decisions ? decisionsHtml(ind.decisions) : ''}
       <div class="d-notes">
         ${def.showMethod && ind.method ? `<h4>Method</h4><p class="method">${ind.method}</p>` : ''}
@@ -648,6 +661,45 @@
                     y: { grid: { display: false }, ticks: { color: ink, font: { size: 11 } }, border: { color: cssVar('--viz-axis') } } },
         },
         plugins: [endLabels],
+      }));
+    });
+  }
+
+  // Connected scatter (ind.scatters): one point per period, joined in time order, later points darker.
+  // The first quarter of every third year and the latest point are labeled.
+  function drawScatters(list) {
+    const ink = cssVar('--viz-ink-2'), grid = cssVar('--viz-grid');
+    const hex = cssVar('--s1').replace('#', '');
+    const rgb = hex.length === 6 ? [0, 2, 4].map((k) => parseInt(hex.slice(k, k + 2), 16)) : [42, 120, 214];
+    const shade = (t) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${(0.18 + 0.82 * t).toFixed(3)})`;
+    list.forEach((b, i) => {
+      const el = document.getElementById('d-sc-' + i);
+      if (!el || !b.points.length) return;
+      const n = b.points.length, lastIdx = n - 1;
+      const labeled = (k) => k === lastIdx || (b.points[k].p.endsWith('Q1') && (+b.points[k].p.slice(0, 4) - +b.points[0].p.slice(0, 4)) % 3 === 0);
+      const pointLabels = {
+        id: 'pointLabels',
+        afterDatasetsDraw(c) {
+          const ctx = c.ctx;
+          ctx.save(); ctx.font = `11px ${Chart.defaults.font.family}`; ctx.fillStyle = cssVar('--viz-ink'); ctx.textBaseline = 'bottom';
+          c.getDatasetMeta(0).data.forEach((pt, k) => { if (labeled(k)) ctx.fillText(k === lastIdx ? periodLabel(b.points[k].p, 'Q') : b.points[k].p.slice(0, 4), pt.x + 6, pt.y - 4); });
+          ctx.restore();
+        },
+      };
+      bdCharts.push(new Chart(el.getContext('2d'), {
+        type: 'scatter',
+        data: { datasets: [{ data: b.points.map((q) => ({ x: q.x, y: q.y })), showLine: true, borderColor: cssVar('--viz-axis'), borderWidth: 1,
+                             pointBackgroundColor: b.points.map((q, k) => shade(n > 1 ? k / (n - 1) : 1)), pointBorderColor: b.points.map((q, k) => (k === lastIdx ? cssVar('--viz-ink') : 'transparent')),
+                             pointBorderWidth: b.points.map((q, k) => (k === lastIdx ? 2 : 0)), pointRadius: b.points.map((q, k) => (k === lastIdx ? 6 : 3.5)), pointHoverRadius: 6 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false, layout: { padding: { top: 14, right: 40 } },
+          plugins: { legend: { display: false },
+                     tooltip: { callbacks: { title: (items) => periodLabel(b.points[items[0].dataIndex].p, 'Q'),
+                                             label: (it) => ` unemployment ${fmt.num(it.parsed.x, 1)} %, vacancy rate ${fmt.num(it.parsed.y, 1)} %` } } },
+          scales: { x: { grid: { color: grid }, ticks: { color: ink, font: { size: 11 } }, border: { color: cssVar('--viz-axis') }, title: { display: true, text: b.x, color: ink, font: { size: 11 } } },
+                    y: { grid: { color: grid }, ticks: { color: ink, font: { size: 11 } }, border: { display: false }, title: { display: true, text: b.y, color: ink, font: { size: 11 } } } },
+        },
+        plugins: [pointLabels],
       }));
     });
   }

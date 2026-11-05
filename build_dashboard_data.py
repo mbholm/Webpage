@@ -292,7 +292,7 @@ def nav_edition(text: str) -> str:
     return (months.get(word.lower(), word) + " " + rest).strip()
 
 
-def nav_registered() -> tuple[dict, dict]:
+def _nav_fetch() -> tuple[dict, dict]:
     """Registered unemployment from NAV's 'Hovedtall om arbeidsmarkedet' page (no API; monthly Excel files whose links change every month)."""
     page = "https://www.nav.no/no/nav-og-samfunn/statistikk/arbeidssokere-og-stillinger-statistikk/hovedtall-om-arbeidsmarkedet"
     html = http_get(page, headers={"User-Agent": "Mozilla/5.0"}).decode("utf-8", "ignore")
@@ -323,6 +323,16 @@ def nav_registered() -> tuple[dict, dict]:
     return series, source
 
 
+_NAV = None
+
+
+def nav_registered() -> tuple[dict, dict]:
+    global _NAV
+    if _NAV is None:
+        _NAV = _nav_fetch()
+    return _NAV
+
+
 _LFS_M = None
 _LFS_Q = None
 
@@ -347,7 +357,7 @@ def lfs_quarterly():
     global _LFS_Q
     if _LFS_Q is None:
         _LFS_Q = ssb_series(ssb_data("14483", [("Kjonn", ["0", "1", "2"]), ("Alder", ["15-74", "15-24", "20-64", "25-39", "25-54", "40-54", "55-74"]), ("Justering", ["S"]),
-                                                ("ContentsCode", ["SysselProsBefolkn", "ArbledProsArbstyrk", "Sysselsatte"]), ("Tid", ["from(2009K1)"])]))
+                                                ("ContentsCode", ["SysselProsBefolkn", "ArbledProsArbstyrk", "Sysselsatte", "Arbeidsledige"]), ("Tid", ["from(2009K1)"])]))
     return _LFS_Q
 
 
@@ -989,6 +999,65 @@ def ind_productivity() -> dict:
                         src("Statistics Norway, fixed capital by industry", "09181", "https://www.ssb.no/en/statbank/table/09181", mk["updated"]),
                         src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", mn["updated"])]}
 
+# --------------------------------------------------------------------------- labor market tightness
+
+def quarterly_mean(periods: list[str], values: list) -> dict[str, float]:
+    """Monthly 'YYYY-MM' series to quarterly means 'YYYY-Qn', only for quarters with all three months."""
+    acc = {}
+    for p, v in zip(periods, values):
+        if v is None:
+            continue
+        y, m = p.split("-")
+        acc.setdefault(f"{y}-Q{(int(m) - 1) // 3 + 1}", []).append(v)
+    return {q: sum(v) / 3 for q, v in acc.items() if len(v) == 3}
+
+
+def ind_tightness() -> dict:
+    pv, sv, mv = ssb_series(ssb_data("11587", [("NACE2007", ["01-96"]), ("ContentsCode", ["LedigeStillinger", "LedigeStillingerPros"]), ("Tid", ["from(2010K1)"])]))
+    pq, sq, mq = lfs_quarterly()
+    nav, nav_source = nav_registered()
+    vac = dict(zip(pv, sv[("01-96", "LedigeStillinger")]))
+    vrate = dict(zip(pv, sv[("01-96", "LedigeStillingerPros")]))
+    u_lfs = {p: (v * 1000 if v is not None else None) for p, v in zip(pq, sq[("0", "15-74", "S", "Arbeidsledige")])}
+    urate = dict(zip(pq, sq[("0", "15-74", "S", "ArbledProsArbstyrk")]))
+    u_nav = quarterly_mean(nav["nav_count"]["periods"], nav["nav_count"]["values"])
+    urate_nav = quarterly_mean(nav["nav_unemployment"]["periods"], nav["nav_unemployment"]["values"])
+
+    def ratio(den):
+        per = [p for p in pv if vac.get(p) is not None and den.get(p)]
+        return per, [round(vac[p] / den[p], 3) for p in per]
+
+    def scatter(rate, title, xlabel, note):
+        pts = [{"p": p, "x": round(rate[p], 2), "y": vrate[p]} for p in pv if vrate.get(p) is not None and rate.get(p) is not None]
+        return {"title": title, "subtitle": note, "x": xlabel, "y": "Vacancy rate, percent of jobs", "points": pts}
+
+    nav_q = sorted(u_nav)
+    series = {
+        "vu_lfs": S("Vacancies per unemployed person, Labor Force Survey", "vacancies per unemployed person", "Q", *ratio(u_lfs), 2, derived=True,
+                    note="Job vacancies (SSB 11587, seasonally adjusted) divided by unemployed persons in the Labor Force Survey (SSB 14483, seasonally adjusted)."),
+        "vu_nav": S("Vacancies per registered unemployed person, NAV", "vacancies per unemployed person", "Q", *ratio(u_nav), 2, derived=True,
+                    note="Job vacancies (SSB 11587, seasonally adjusted) divided by the quarterly average of NAV's seasonally adjusted number of registered fully unemployed."),
+        "vacancies": S("Job vacancies (seasonally adjusted)", "vacancies", "Q", pv, sv[("01-96", "LedigeStillinger")], 0),
+        "vacancy_rate": S("Job vacancy rate (seasonally adjusted)", "percent of jobs", "Q", pv, sv[("01-96", "LedigeStillingerPros")], 1),
+        "unemployed_lfs": S("Unemployed persons, Labor Force Survey (seasonally adjusted)", "persons", "Q", [p for p in pq if u_lfs.get(p) is not None], [u_lfs[p] for p in pq if u_lfs.get(p) is not None], 0),
+        "unemployed_nav": S("Registered fully unemployed, NAV (seasonally adjusted, quarterly average)", "persons", "Q", nav_q, [round(u_nav[q]) for q in nav_q], 0, derived=True,
+                            note="Average of the three months in the quarter."),
+    }
+    scatters = [
+        scatter(urate, "Beveridge curve, Labor Force Survey unemployment", "Unemployment rate (Labor Force Survey), percent of the labor force",
+                "Each point is a quarter, joined in time order, with darker points for later quarters. Moves up and to the left mean a tighter labor market. "
+                "A shift of the whole curve outward means vacancies are filled less easily at a given unemployment rate."),
+        scatter(urate_nav, "Beveridge curve, registered unemployment", "Registered unemployment rate (NAV), percent of the labor force",
+                "The same vacancy rate against NAV's registered unemployment, as a quarterly average of the monthly seasonally adjusted rate. "
+                "The spike in 2020 is the furloughs during the pandemic."),
+    ]
+    return {"series": series, "scatters": scatters,
+            "sources": [src("Statistics Norway, job vacancies", "11587", "https://www.ssb.no/en/statbank/table/11587", mv["updated"],
+                            "A survey of the stock of vacancies, quarterly from 2010. Vacancies are rounded to the nearest 100."),
+                        src("Statistics Norway, Labor Force Survey, quarterly", "14483", "https://www.ssb.no/en/statbank/table/14483", mq["updated"]),
+                        nav_source]}
+
+
 # --------------------------------------------------------------------------- consumption, investment and credit
 
 QNA_DEMAND = ["koh.nr61_", "koh.nr61vare", "koh.nr61tjen", "koh.nr61L8", "koo.nroff",
@@ -1368,6 +1437,7 @@ def main() -> int:
     run("inflation", ind_inflation, proj, previous.get("inflation"))
     run("unemployment", ind_unemployment)
     run("employment", ind_employment)
+    run("tightness", ind_tightness)
     run("rates", ind_rates, proj, previous.get("rates"))
     run("fx", ind_fx)
     run("trade", ind_trade)
