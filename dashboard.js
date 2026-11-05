@@ -217,6 +217,21 @@
       defaultYears: 30, showMethod: true, avgYears: 30,
     },
     {
+      id: 'inequality', title: 'Inequality', kicker: 'Income and wealth distribution', goodUp: null,
+      desc: 'Income inequality is measured by the Gini coefficient for household income after tax per consumption unit, where 0 is full equality and 1 is one person having everything, and by two ratios between high and low incomes. Wealth inequality is shown as shares of total net wealth held by the richest households and by the bottom half. Long-run top shares come from the World Inequality Database and use other definitions than Statistics Norway.',
+      headline: { series: 'gini', fmt: (v) => fmt.num(v, 3), sub: 'Gini coefficient, income after tax' },
+      secondary: [{ series: 'wealth_top1', label: 'top 1 % share of net wealth', fmt: fmt.pct }],
+      spark: 'gini',
+      views: [{ s: 'gini', short: 'Gini coefficient', kind: 'line', on: true, group: 'Income after tax, Statistics Norway' }, { s: 'gini_all', short: 'Gini, including students', kind: 'line', group: 'Income after tax, Statistics Norway' },
+              { s: 'p90p10', short: 'P90/P10', kind: 'line', group: 'Income after tax, Statistics Norway' }, { s: 's80s20', short: 'S80/S20', kind: 'line', group: 'Income after tax, Statistics Norway' },
+              { s: 'wealth_top10', short: 'Top 10 %', kind: 'line', group: 'Share of net wealth, Statistics Norway' }, { s: 'wealth_top5', short: 'Top 5 %', kind: 'line', group: 'Share of net wealth, Statistics Norway' },
+              { s: 'wealth_top1', short: 'Top 1 %', kind: 'line', group: 'Share of net wealth, Statistics Norway' }, { s: 'wealth_top01', short: 'Top 0.1 %', kind: 'line', group: 'Share of net wealth, Statistics Norway' },
+              { s: 'wealth_bottom50', short: 'Bottom half', kind: 'line', group: 'Share of net wealth, Statistics Norway' },
+              { s: 'wid_income_top1', short: 'Income, top 1 %', kind: 'line', group: 'Top shares, World Inequality Database' }, { s: 'wid_income_top10', short: 'Income, top 10 %', kind: 'line', group: 'Top shares, World Inequality Database' },
+              { s: 'wid_wealth_top1', short: 'Wealth, top 1 %', kind: 'line', group: 'Top shares, World Inequality Database' }, { s: 'wid_wealth_top10', short: 'Wealth, top 10 %', kind: 'line', group: 'Top shares, World Inequality Database' }],
+      defaultYears: 30,
+    },
+    {
       id: 'consumption', title: 'Consumption', kicker: 'Activity', goodUp: true,
       desc: 'Household consumption and general government consumption from the quarterly national accounts. Volumes at constant 2023 prices, seasonally adjusted. The latest quarters are preliminary.',
       headline: { series: 'households_qoq', fmt: (v) => fmt.signedPct(v), sub: 'household consumption, quarter-on-quarter, s.a.' },
@@ -482,6 +497,10 @@
       periods = [];
       for (let y = y0, m = m0; y < y1 || (y === y1 && m <= m1); m === 12 ? (y++, m = 1) : m++) periods.push(`${y}-${String(m).padStart(2, '0')}`);
     }
+    if (sers.every((s) => s.freq === 'A') && periods.length > 1) {
+      const y0 = +periods[0], y1 = +periods[periods.length - 1];
+      if (y1 - y0 + 1 > periods.length) { periods = []; for (let y = y0; y <= y1; y++) periods.push(String(y)); }
+    }
     const datasets = views.map((v) => {
       const s = state.ind.series[v.s];
       const map = new Map(s.periods.map((p, i) => [p, s.values[i]]));
@@ -546,7 +565,10 @@
         x: { grid: { display: false }, border: { color: cssVar('--viz-axis') },
              ticks: { color: ink, maxRotation: 0, autoSkip: false, font: { size: 11 }, callback(v, i) { return i % tickEvery === 0 ? axisLabel(periods[i]) : ''; } } },
         y: { grid: { color: grid }, border: { display: false },
-             ticks: { color: ink, font: { size: 11 }, callback: (v) => fmt.num(v, Math.abs(v) < 10 && v !== Math.round(v) ? 1 : 0) },
+             ticks: { color: ink, font: { size: 11 }, callback(v, i, ticks) {   // as many decimals as the spacing between the ticks needs
+               const step = ticks.length > 1 ? Math.abs(ticks[1].value - ticks[0].value) : 1;
+               return fmt.num(v, step >= 1 ? 0 : step >= 0.1 ? 1 : step >= 0.01 ? 2 : 3);
+             } },
              title: { display: !!unit, text: unit, color: ink, font: { size: 11 } } },
       },
     };

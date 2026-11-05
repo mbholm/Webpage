@@ -1044,6 +1044,62 @@ def ind_credit() -> dict:
                         src("Statistics Norway, financial accounts, household ratios", "09477", "https://www.ssb.no/en/statbank/table/09477", mq["updated"])]}
 
 
+# --------------------------------------------------------------------------- inequality
+
+def owid_series(slug: str, country: str = "Norway") -> tuple[list[str], list[float]]:
+    """One country's series from an Our World in Data chart (CSV download of the full chart data)."""
+    url = f"https://ourworldindata.org/grapher/{slug}.csv?csvType=full&useColumnShortNames=true"
+    rows = list(csv.DictReader(io.StringIO(http_get(url, headers={"User-Agent": "Mozilla/5.0"}).decode("utf-8"))))
+    if not rows:
+        raise RuntimeError(f"Our World in Data: no rows for {slug}")
+    col = next(c for c in rows[0] if c not in ("entity", "code", "year"))
+    pts = sorted((int(r["year"]), float(r[col])) for r in rows if r["entity"] == country and r[col] not in ("", None))
+    if not pts:
+        raise RuntimeError(f"Our World in Data: no {country} rows for {slug}")
+    return [str(y) for y, _ in pts], [round(v, 2) for _, v in pts]
+
+
+def ind_inequality(prev: dict | None = None) -> dict:
+    pi, si, mi = ssb_series(ssb_data("07756", [("Forbruksenhet2", ["01", "99"]), ("ContentsCode", ["Ginikoeffisient", "P90P10", "S80S20"]), ("Tid", ["from(1986)"])]))
+    pw, sw, mw = ssb_series(ssb_data("10318", [("Desiler", ["01", "02", "03", "04", "05", "10", "05b", "01b", "01c"]), ("ContentsCode", ["Nettoformue"]), ("Tid", ["from(2010)"])]))
+    low = [[sw[(d, "Nettoformue")][i] for d in ("01", "02", "03", "04", "05")] for i in range(len(pw))]
+    bottom50 = [None if None in row else round(sum(row), 1) for row in low]
+    series = {
+        "gini": S("Gini coefficient, income after tax per consumption unit (excluding student households)", "Gini coefficient", "A", pi, si[("99", "Ginikoeffisient")], 3),
+        "gini_all": S("Gini coefficient, income after tax per consumption unit (whole population)", "Gini coefficient", "A", pi, si[("01", "Ginikoeffisient")], 3),
+        "p90p10": S("P90/P10: income at the 90th percentile relative to the 10th", "ratio", "A", pi, si[("99", "P90P10")], 1),
+        "s80s20": S("S80/S20: income share of the top fifth relative to the bottom fifth", "ratio", "A", pi, si[("99", "S80S20")], 1),
+        "wealth_top10": S("Share of net wealth, top 10 percent of households", "percent of net wealth", "A", pw, sw[("10", "Nettoformue")], 1),
+        "wealth_top5": S("Share of net wealth, top 5 percent of households", "percent of net wealth", "A", pw, sw[("05b", "Nettoformue")], 1),
+        "wealth_top1": S("Share of net wealth, top 1 percent of households", "percent of net wealth", "A", pw, sw[("01b", "Nettoformue")], 1),
+        "wealth_top01": S("Share of net wealth, top 0.1 percent of households", "percent of net wealth", "A", pw, sw[("01c", "Nettoformue")], 1),
+        "wealth_bottom50": S("Share of net wealth, bottom half of households", "percent of net wealth", "A", pw, bottom50, 1, derived=True,
+                             note="Sum of the shares of deciles 1 to 5 (SSB 10318)."),
+    }
+    sources = [src("Statistics Norway, measures of income dispersion", "07756", "https://www.ssb.no/en/statbank/table/07756", mi["updated"],
+                   "Household income after tax per consumption unit (EU scale), distributed between persons. Negative amounts are set to zero."),
+               src("Statistics Norway, share of net wealth by decile", "10318", "https://www.ssb.no/en/statbank/table/10318", mw["updated"],
+                   "Estimated net wealth of households, with homes at estimated market value. Students are not included.")]
+    wid = {"wid_income_top1": ("income-share-top-1-before-tax-wid", "Share of pre-tax income, top 1 percent of adults (World Inequality Database)", "percent of pre-tax income"),
+           "wid_income_top10": ("income-share-top-10-before-tax-wid", "Share of pre-tax income, top 10 percent of adults (World Inequality Database)", "percent of pre-tax income"),
+           "wid_wealth_top1": ("wealth-share-richest-1-percent", "Share of net wealth, top 1 percent of adults (World Inequality Database)", "percent of net wealth"),
+           "wid_wealth_top10": ("wealth-share-richest-10-percent", "Share of net wealth, top 10 percent of adults (World Inequality Database)", "percent of net wealth")}
+    wid_source = src("World Inequality Database, processed by Our World in Data", None, "https://ourworldindata.org/economic-inequality", None,
+                     "Top shares among adults, before tax for income. The series have gaps in early years and are not directly comparable with Statistics Norway's household figures.")
+    try:
+        for key, (slug, label, unit) in wid.items():
+            series[key] = S(label, unit, "A", *owid_series(slug), 1)
+        sources.append(wid_source)
+    except Exception as e:   # these change once a year: keep what was fetched last time
+        print(f"       inequality: World Inequality Database series kept from the previous run ({type(e).__name__}: {e})")
+        for key in wid:
+            if prev and key in prev.get("series", {}):
+                series[key] = prev["series"][key]
+        if any(k in series for k in wid):
+            sources.append(wid_source)
+    return {"series": series, "sources": sources}
+
+
 # --------------------------------------------------------------------------- government budget (Nasjonalbudsjettet, regjeringen.no)
 
 BUDGET_LABELS = {   # table labels on regjeringen.no -> English
@@ -1294,6 +1350,7 @@ def main() -> int:
     run("productivity", ind_productivity)
     run("wages", ind_wages)
     run("labor_shares", ind_labor_shares)
+    run("inequality", ind_inequality, previous.get("inequality"))
 
     OUT.parent.mkdir(exist_ok=True)
     payload = {"generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "errors": errors, "kept": kept, "indicators": indicators}
