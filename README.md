@@ -62,10 +62,11 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 
 A one-page dashboard of Norwegian macro indicators (GDP, consumption, investment, inflation, unemployment, employment, labor market tightness, interest
 rates, the krone, trade balance, current account, the oil fund, the government budget, house prices, credit, inequality,
-productivity, wages and labor shares). Three files:
+productivity, wages and labor shares), followed by two blocks that compare Norway with the Nordic countries and with European
+countries (GDP, inflation, interest rates, unemployment, employment and productivity in each). Three files:
 
 - `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
-  (SDMX API), Eurostat (JSON API), NAV, NBIM and the Ministry of Finance, computes the derived series (TFP, labor productivity,
+  (SDMX API), Eurostat (JSON API), the BIS and the OECD (SDMX APIs), NAV, NBIM and the Ministry of Finance, computes the derived series (TFP, labor productivity,
   labor shares, ratios to GDP, growth rates) and writes `data/dashboard.json`. Each indicator is fetched
   independently; if one source fails, that indicator keeps the previous data and the error is recorded
   in the JSON.
@@ -118,6 +119,22 @@ Sources without an API are read from the publisher's web page, so they break if 
   annual reports ("Total management costs in Norges Bank were X billion kroner"). **Add one line each
   year** when the annual report comes out in late February. 1998–2010 are estimated from NBIM's cost
   ratio in basis points and are marked as approximate on the page.
+
+The comparison blocks (`CMP_*` and `cmp_*` in the build script, `BLOCKS` and `compareDefs` in `dashboard.js`):
+
+- The countries are set in `CMP_BLOCKS` (data) and `BLOCKS` (display). The same six tiles are generated for each block.
+  A country keeps one color across a block, and a dashed line is a second measure for the same country.
+- GDP, inflation (HICP), unemployment and employment (harmonized labor force surveys) come from Eurostat, one
+  call per dataset for all countries. Policy rates come from the BIS and ten-year bond yields from the OECD.
+  Mainland Norway comes from Statistics Norway, taken from the `gdp` and `productivity` indicators.
+- Productivity is not Eurostat's own indicator. Labor productivity and TFP are computed for every country by
+  `growth_accounting`, the same function as for Mainland Norway, from Eurostat's national accounts (value added
+  `nama_10_a10`, hours `nama_10_a10_e`, net capital stock `nama_10_nfa_st`, income `nama_10_gdp`). Countries
+  without a capital stock at constant prices (Iceland, Switzerland) get labor productivity only.
+- Eurostat's unit codes carry the reference year (`CLV_I20`, `CLV20_MNAC`). When Eurostat moves to a new
+  reference year the codes in `CMP_EUROSTAT` must be updated. The tiles show a warning when that happens.
+- Eurostat's euro area code differs between datasets (`EA`, `EA20`, `EA21`). The script takes the one with the
+  latest data, and one fixed composition for the productivity calculation.
 
 Method notes: TFP is computed in growth form (Törnqvist), weighting hours and capital by the labor
 share from the national accounts (table 09170), then cumulated into an index. Labor shares follow the

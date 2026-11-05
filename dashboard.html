@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Norway Dashboard · Martin B. Holm</title>
-  <meta name="description" content="Key macroeconomic indicators for Norway on one page: GDP, inflation, unemployment, interest rates, the krone, trade, the current account, the oil fund, house prices and productivity. Data from Statistics Norway, Norges Bank and NBIM, updated daily.">
+  <meta name="description" content="Key macroeconomic indicators for Norway on one page: GDP, inflation, unemployment, interest rates, the krone, trade, the current account, the oil fund, house prices and productivity, with comparisons to the Nordic countries and Europe. Data from Statistics Norway, Norges Bank, NBIM and Eurostat, updated daily.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="assets/favicon-180.png">
@@ -70,8 +70,20 @@
     <p class="d-loading" id="tiles-loading">Loading data…</p>
   </section>
 
+  <div class="dash-block" hidden>
+    <h2>Norway and the Nordics</h2>
+    <p class="block-lead">Norway next to Sweden, Denmark, Finland and Iceland. The figures come from international sources that use the same definitions for every country, so they can differ slightly from the national figures above.</p>
+    <section class="tiles nordic" id="tiles-nordic" aria-label="Norway and the Nordic countries"></section>
+  </div>
+
+  <div class="dash-block" hidden>
+    <h2>Norway and Europe</h2>
+    <p class="block-lead">Norway next to the euro area, Germany, France and the Netherlands, from the same international sources. The charts behind the tiles also hold Italy, Spain and Switzerland.</p>
+    <section class="tiles europe" id="tiles-europe" aria-label="Norway and European countries"></section>
+  </div>
+
   <p class="dash-meta" style="margin-top:1.5rem">
-    Sources: Statistics Norway (PxWebApi), Norges Bank (data.norges-bank.no and the Monetary Policy Report), the Ministry of Finance (Nasjonalbudsjettet), NAV, NBIM, Eurostat and the World Inequality Database. Derived series (growth rates, ratios to GDP, productivity) are my own calculations and are marked as such. Preliminary national-accounts figures are revised by SSB.
+    Sources: Statistics Norway (PxWebApi), Norges Bank (data.norges-bank.no and the Monetary Policy Report), the Ministry of Finance (Nasjonalbudsjettet), NAV, NBIM, Eurostat, the Bank for International Settlements, the OECD and the World Inequality Database. Derived series (growth rates, ratios to GDP, productivity) are my own calculations and are marked as such. Preliminary national-accounts figures are revised by SSB.
   </p>
 </main>
 

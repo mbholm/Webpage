@@ -287,6 +287,85 @@
     },
   ];
 
+  // ------------------------------------------------------------------ comparisons with other countries
+  // Two blocks with the same six tiles: Norway against the Nordic countries and against European countries.
+  // A country keeps one color (slot) across the tiles of a block. A dashed line is a second measure for the same country.
+  const BLOCKS = {
+    nordic: {
+      kicker: 'Nordic comparison', others: 'the other Nordic countries', shown: 5,
+      countries: [['no', 'Norway'], ['se', 'Sweden'], ['dk', 'Denmark'], ['fi', 'Finland'], ['is', 'Iceland']],
+      policy: [['no', 'Norway', 0], ['se', 'Sweden', 1], ['dk', 'Denmark', 2], ['fi', 'Finland (euro area)', 3], ['is', 'Iceland', 4]],
+      yields: [['no', 'Norway', 0], ['se', 'Sweden', 1], ['dk', 'Denmark', 2], ['fi', 'Finland', 3], ['is', 'Iceland', 4]],
+      ratesNote: 'Finland is in the euro area and has the European Central Bank’s rate. The OECD’s yield series for Iceland ends in 2022.',
+    },
+    europe: {
+      kicker: 'European comparison', others: 'the euro area and its largest economies, plus Switzerland', shown: 5,
+      countries: [['no', 'Norway'], ['ea', 'Euro area'], ['de', 'Germany'], ['fr', 'France'], ['nl', 'Netherlands'], ['it', 'Italy'], ['es', 'Spain'], ['ch', 'Switzerland']],
+      policy: [['no', 'Norway', 0], ['ea', 'Euro area', 1], ['gb', 'United Kingdom', 6], ['ch', 'Switzerland', 7]],
+      yields: [['no', 'Norway', 0], ['de', 'Germany', 2], ['fr', 'France', 3], ['nl', 'Netherlands', 4], ['it', 'Italy', 5], ['gb', 'United Kingdom', 6], ['ch', 'Switzerland', 7]],
+      ratesNote: 'Germany, France, the Netherlands and Italy share the euro area’s policy rate, so they appear only among the bond yields. The United Kingdom is included here because the Bank for International Settlements and the OECD cover it. Eurostat, the source for the other tiles, stopped publishing figures for the United Kingdom in 2020.',
+    },
+  };
+  function compareDefs(block) {
+    const B = BLOCKS[block];
+    const C = B.countries.map(([key, label], slot) => ({ key, label, slot, on: slot < B.shown }));
+    // GDP and productivity: Norway is Mainland Norway (Statistics Norway), with the total economy as a dashed alternative
+    const M = [{ key: 'mainland', label: 'Mainland Norway', slot: 0, on: true }, ...C.slice(1), { key: 'no', label: 'Norway, total economy', slot: 0, dash: true }];
+    const P = B.policy.map(([key, label, slot]) => ({ key, label, slot, on: true }));
+    const Y = B.yields.map(([key, label, slot]) => ({ key, label, slot }));
+    const views = (list, prefix, group, o = {}) => list.map((c) => ({ s: `${prefix}_${c.key}`, short: c.label, tip: o.tip ? `${c.label}, ${o.tip}` : c.label, kind: 'line', slot: c.slot, dash: !!(o.dash || c.dash), on: !!(o.on && c.on), group }));
+    const rows = (list, prefix) => list.filter((c) => c.on).map((c) => ({ series: `${prefix}_${c.key}`, label: c.label, slot: c.slot }));
+    const mk = (kind, o) => ({ id: `${block}_${kind}`, section: block, kicker: B.kicker, goodUp: null, headline: { series: o.compare.rows[0].series, fmt: o.compare.fmt, sub: o.compare.sub }, ...o });
+    return [
+      mk('gdp', {
+        title: 'GDP',
+        desc: `Gross domestic product in Norway and ${B.others}. Volumes, seasonally and calendar adjusted, from Eurostat. Norway is shown as Mainland Norway, from Statistics Norway, because the total economy moves with oil and gas production. The total is available as a dashed line. The index is set to 100 in the fourth quarter of 2019.`,
+        compare: { rows: rows(M, 'yoy'), fmt: (v) => fmt.signedPct(v), sub: 'volume growth from a year earlier' }, sparks: rows(M, 'index'),
+        views: [...views(M, 'index', 'Index, Q4 2019 = 100', { on: true }), ...views(M, 'yoy', 'Growth from a year earlier', { tip: 'y/y' }), ...views(M, 'qoq', 'Quarter-on-quarter growth', { tip: 'q/q' })],
+        defaultYears: 10,
+      }),
+      mk('inflation', {
+        title: 'Inflation',
+        desc: 'Twelve-month change in the harmonized index of consumer prices (HICP), which is compiled on the same definitions in every country and published by Eurostat. It differs from the national consumer price index in the inflation tile at the top of the page, mainly because it leaves out owner-occupied housing costs. Dashed lines show core inflation, i.e. the HICP excluding energy, food, alcohol and tobacco.',
+        compare: { rows: rows(C, 'hicp'), fmt: (v) => fmt.pct(v), sub: 'HICP, 12-month change' }, sparkZero: true,
+        views: [...views(C, 'hicp', 'HICP, all items', { on: true }), ...views(C, 'core', 'Core: excluding energy, food, alcohol and tobacco', { dash: true, tip: 'core' })],
+        defaultYears: 10,
+      }),
+      mk('rates', {
+        title: 'Interest rates',
+        desc: `Central bank policy rates at the end of each month, from the Bank for International Settlements, and yields on ten-year government bonds as dashed lines, from the OECD. ${B.ratesNote}`,
+        compare: { rows: rows(P, 'policy'), fmt: (v) => fmt.pct(v, 2), sub: 'central bank policy rate' },
+        views: [...views(P, 'policy', 'Policy rate', { on: true, tip: 'policy rate' }), ...views(Y, 'gov10y', '10-year government bond yield', { dash: true, tip: '10-year yield' })],
+        defaultYears: 20,
+      }),
+      mk('unemployment', {
+        title: 'Unemployment',
+        desc: 'Unemployed persons as a share of the labor force, ages 15 to 74, seasonally adjusted. The figures come from each country’s labor force survey as harmonized by Eurostat. Dashed lines show unemployment among people under 25.',
+        compare: { rows: rows(C, 'rate'), fmt: (v) => fmt.pct(v), sub: 'unemployment rate, ages 15–74' },
+        views: [...views(C, 'rate', 'Unemployment rate, ages 15–74', { on: true }), ...views(C, 'youth', 'Youth unemployment, under 25', { dash: true, tip: 'under 25' })],
+        defaultYears: 10,
+      }),
+      mk('employment', {
+        title: 'Employment',
+        desc: 'Employed persons as a share of the population aged 20 to 64, seasonally adjusted. The figures come from each country’s labor force survey as harmonized by Eurostat, and start in 2009 for most countries. Dashed lines show the rate for ages 15 to 64.',
+        compare: { rows: rows(C, 'rate2064'), fmt: (v) => fmt.pct(v), sub: 'employment rate, ages 20–64' },
+        views: [...views(C, 'rate2064', 'Ages 20–64', { on: true }), ...views(C, 'rate1564', 'Ages 15–64', { dash: true, tip: 'ages 15–64' })],
+        defaultYears: 20,
+      }),
+      mk('productivity', {
+        title: 'Productivity',
+        desc: 'Labor productivity (value added per hour worked) and total factor productivity, computed from each country’s national accounts with the same method as in the productivity tile for Mainland Norway. TFP growth comes from growth accounting, weighting hours and capital by the labor share observed in each country’s national accounts. Norway is shown as Mainland Norway because oil and gas production distorts the total. The total is available as a dashed line. The indices are set to 100 in 2000. TFP needs a capital stock, which ends earlier than the other series for some countries and is missing for Iceland and Switzerland.',
+        compare: { rows: rows(M, 'lpg'), fmt: (v) => fmt.signedPct(v), sub: 'labor productivity growth' }, sparks: rows(M, 'lp'),
+        views: [...views(M, 'lp', 'Labor productivity, index 2000 = 100', { on: true, tip: 'labor productivity' }), ...views(M, 'tfp', 'Total factor productivity, index 2000 = 100', { tip: 'TFP' }),
+                ...views(M, 'lpg', 'Labor productivity growth', { tip: 'labor productivity growth' }), ...views(M, 'tfpg', 'TFP growth', { tip: 'TFP growth' }),
+                ...views(M, 'share', 'Labor share used as weight', { tip: 'labor share' })],
+        defaultYears: 30, showMethod: true,
+      }),
+    ];
+  }
+  DEFS.push(...compareDefs('nordic'), ...compareDefs('europe'));
+  const HOSTS = { nordic: 'tiles-nordic', europe: 'tiles-europe' };   // def.section -> the grid that holds its tiles
+
   // ------------------------------------------------------------------ data load
   let DATA = null;
   const tilesEl = document.getElementById('tiles');
@@ -307,16 +386,36 @@
   // ------------------------------------------------------------------ tiles
   function renderTiles() {
     tilesEl.innerHTML = '';
+    Object.values(HOSTS).forEach((id) => { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
     for (const def of DEFS) {
       const ind = DATA.indicators[def.id];
       if (!ind) continue;
+      const host = def.section ? document.getElementById(HOSTS[def.section]) : tilesEl;
       const s = ind.series[def.headline.series];
+      if (!host || !s) continue;
       const L = last(s), P = last(s, 2);
       const b = document.createElement('button');
       b.className = 'tile' + (ind.stale ? ' stale' : '');
       b.type = 'button';
-      b.setAttribute('aria-label', `${def.title}: ${def.headline.fmt(L.v)} (${periodLabel(L.p, s.freq)}). Open details.`);
       b.addEventListener('click', () => openDetail(def.id));
+      if (def.compare) {   // comparison tile: one row per country instead of one headline number
+        const rows = def.compare.rows.filter((r) => ind.series[r.series]);
+        b.setAttribute('aria-label', `${def.title}, ${def.compare.sub}: ${rows.map((r) => `${r.label} ${def.compare.fmt(last(ind.series[r.series]).v)}`).join(', ')}. Open details.`);
+        b.innerHTML = `
+        <div class="t-head"><div class="t-title">${def.title}</div><div class="t-period">${periodLabel(L.p, s.freq)}</div></div>
+        <div class="t-sub">${def.compare.sub}</div>
+        <div class="t-rows">${rows.map((r, i) => {
+          const rs = ind.series[r.series], l = last(rs);   // a country with another latest period than Norway gets its period written out
+          return `<div class="t-row${i === 0 ? ' first' : ''}"><span class="dot" style="background:var(${SLOTS[r.slot]})"></span><span class="c">${r.label}</span>${l.p !== L.p ? `<span class="p">${periodLabel(l.p, rs.freq)}</span>` : ''}<span class="v">${def.compare.fmt(l.v)}</span></div>`;
+        }).join('')}</div>
+        <div class="t-spark">${sparkMulti(ind, def)}</div>
+        <div class="t-foot"><span>${def.kicker}</span><span class="more">Explore →</span></div>`;
+        host.appendChild(b);
+        const blockEl = host.closest('.dash-block');
+        if (blockEl) blockEl.hidden = false;
+        continue;
+      }
+      b.setAttribute('aria-label', `${def.title}: ${def.headline.fmt(L.v)} (${periodLabel(L.p, s.freq)}). Open details.`);
       const sec = (def.secondary || []).map((x) => { const ss = ind.series[x.series]; if (!ss) return ''; const l = last(ss); return `${x.label} ${x.fmt(l.v)}`; }).filter(Boolean).join(' · ');
       const plabel = (def.headline.latestLabel && isCurrentYear(L.p, s.freq)) ? `${L.p} (${def.headline.latestLabel})` : periodLabel(L.p, s.freq);
       b.innerHTML = `
@@ -327,8 +426,34 @@
         <div class="t-sub">${sec}</div>
         <div class="t-spark">${sparkline(ind.series[def.spark], def)}</div>
         <div class="t-foot"><span>${def.kicker}</span><span class="more">Explore →</span></div>`;
-      tilesEl.appendChild(b);
+      host.appendChild(b);
     }
+  }
+
+  // Sparkline for a comparison tile: one line per country in its color, Norway on top and heavier
+  function sparkMulti(ind, def) {
+    const items = (def.sparks || def.compare.rows).map((r) => ({ ...r, s: ind.series[r.series] })).filter((r) => r.s);
+    if (!items.length) return '';
+    const f = items[0].s.freq, n = f === 'M' ? 120 : f === 'Q' ? 40 : 25;
+    const when = new Map();
+    items.forEach((r) => r.s.periods.forEach((p, i) => { if (r.s.values[i] != null) when.set(p, periodTime(p)); }));
+    const periods = [...when.keys()].sort((a, b) => when.get(a) - when.get(b)).slice(-n);
+    if (periods.length < 2) return '';
+    const pos = new Map(periods.map((p, i) => [p, i]));
+    const W = 240, H = 56, pad = 3;
+    let min = Infinity, max = -Infinity;
+    const lines = items.map((r) => {
+      const pts = [];
+      r.s.periods.forEach((p, i) => { const v = r.s.values[i]; if (v != null && pos.has(p)) { pts.push([pos.get(p), v]); min = Math.min(min, v); max = Math.max(max, v); } });
+      return { r, pts };
+    });
+    if (def.sparkZero) { min = Math.min(min, 0); max = Math.max(max, 0); }
+    if (max === min) { max += 1; min -= 1; }
+    const x = (i) => pad + (i / (periods.length - 1)) * (W - 2 * pad);
+    const y = (v) => pad + (1 - (v - min) / (max - min)) * (H - 2 * pad);
+    const zero = def.sparkZero && min < 0 && max > 0 ? `<line class="zero" x1="0" x2="${W}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>` : '';
+    const path = ({ r, pts }, k) => `<path class="cline${k === 0 ? ' first' : ''}" style="stroke:var(${SLOTS[r.slot]})" d="${pts.map(([i, v], j) => (j ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join('')}"/>`;
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${zero}${lines.map(path).reverse().join('')}</svg>`;
   }
   function isCurrentYear(p, freq) { return freq === 'A' && +p === new Date().getFullYear(); }
 
@@ -415,26 +540,29 @@
   const viewOf = (key) => state.def.views.find((v) => v.s === key);
   const viewLabel = (v, s) => v.short || (s ? s.label.split(/[,(]/)[0].trim() : v.s);
   // Color slot of a view; a projection (tint) borrows the color of the series it extends
-  const slotOf = (def, v) => { const t = v.tint ? def.views.find((x) => x.s === v.tint) : null; return def.views.indexOf(t || v) % 8; };
+  // A view can also name its color itself (slot), which keeps a country in one color across groups and tiles
+  const slotOf = (def, v) => { const b = (v.tint && def.views.find((x) => x.s === v.tint)) || v; return (b.slot != null ? b.slot : def.views.indexOf(b)) % 8; };
   // The palette has eight colors. Series that are switched on never share one: a clash moves the later series to the next free color.
+  // A dashed series (dash) may share its color with a solid one: it is another measure for the same country.
   function assignSlots() {
     const used = new Set(), map = new Map();
     const active = state.def.views.filter((v) => state.on.has(v.s));
     for (const v of active.filter((x) => !x.tint)) {
+      const kind = v.dash ? 'd' : 's';
       let slot = slotOf(state.def, v), n = 0;
-      while (used.has(slot) && n < 8) { slot = (slot + 1) % 8; n++; }
-      used.add(slot); map.set(v.s, slot);
+      while (used.has(kind + slot) && n < 8) { slot = (slot + 1) % 8; n++; }
+      used.add(kind + slot); map.set(v.s, slot);
     }
     for (const v of active.filter((x) => x.tint)) map.set(v.s, map.has(v.tint) ? map.get(v.tint) : slotOf(state.def, v));
     state.slots = map;
   }
   const slotFor = (def, v) => (state && state.def === def && state.slots && state.slots.has(v.s) ? state.slots.get(v.s) : slotOf(def, v));
-  const swatchStyle = (def, v, s) => `background:${s && s.projection ? `repeating-linear-gradient(90deg, var(${SLOTS[slotFor(def, v)]}) 0 4px, transparent 4px 7px)` : `var(${SLOTS[slotFor(def, v)]})`}`;
+  const swatchStyle = (def, v, s) => `background:${(s && s.projection) || v.dash ?`repeating-linear-gradient(90deg, var(${SLOTS[slotFor(def, v)]}) 0 4px, transparent 4px 7px)` : `var(${SLOTS[slotFor(def, v)]})`}`;
 
   function buildDetailHtml(def, ind) {
     const hs = ind.series[def.headline.series];
     const L = last(hs), P = last(hs, 2);
-    const stats = [
+    const stats = def.compare ? def.compare.rows.filter((r) => ind.series[r.series]).map((r) => { const ss = ind.series[r.series], l = last(ss); return { k: r.label, v: def.compare.fmt(l.v), s: periodLabel(l.p, ss.freq) }; }) : [
       { k: 'Latest', v: def.headline.fmt(L.v), s: periodLabel(L.p, hs.freq) },
       { k: 'Previous', v: def.headline.fmt(P.v), s: periodLabel(P.p, hs.freq) },
       ...(def.secondary || []).map((x) => { const ss = ind.series[x.series]; if (!ss) return null; const l = last(ss); return { k: x.label, v: x.fmt(l.v), s: periodLabel(l.p, ss.freq) }; }).filter(Boolean),
@@ -450,13 +578,18 @@
       return `<details class="fold"${vs.some((v) => state.on.has(v.s)) ? ' open' : ''}><summary><span class="label">${g}</span><span class="count">${vs.length} series</span></summary><div class="group">${vs.map(pill).join('')}</div></details>`;
     }).join('');
     const sources = (ind.sources || []).map((s) => `<li>${s.url ? `<a href="${s.url}">${s.name}</a>` : s.name}${s.table ? ` (${/^\d/.test(s.table) ? 'table ' : 'dataflow '}${s.table})` : ''}${s.updated ? `, updated ${s.updated}` : ''}${s.note ? `. ${s.note}` : ''}</li>`).join('');
-    const derived = Object.values(ind.series).filter((s) => s.derived).map((s) => `<li>${s.label}${s.note ? ': ' + s.note : ''}</li>`).join('');
+    const derivedAll = Object.values(ind.series).filter((s) => s.derived);
+    // A tile where every series is an own calculation says so in one line instead of listing them all
+    const derived = derivedAll.length > 12 && derivedAll.length === Object.keys(ind.series).length
+      ? '<li>Every series in this tile is my own calculation from the sources below.</li>'
+      : derivedAll.map((s) => `<li>${s.label}${s.note ? ': ' + s.note : ''}</li>`).join('');
     return `
       <div class="d-top">
         <div><div class="kicker">${def.kicker}</div><h2 id="d-title">${def.title}</h2></div>
         <button class="d-close" type="button" aria-label="Close">✕</button>
       </div>
       <p class="d-desc">${def.desc}</p>
+      ${def.compare ? `<p class="d-statlabel">Latest reading, ${def.compare.sub}</p>` : ''}
       <div class="d-stats">${stats.map((s) => `<div class="st"><div class="k">${s.k}</div><div class="v">${s.v}<small>${s.s}</small></div></div>`).join('')}</div>
       <div class="d-controls">
         <div class="group"><span class="label">Range</span>${ranges.map((y) => `<button class="pill" type="button" data-years="${y}">${y >= 100 ? 'Max' : y + ' y'}</button>`).join('')}</div>
@@ -596,7 +729,7 @@
       const color = cssVar(SLOTS[d.slot % 8]);
       const base = { label: d.label, data: d.data, _dec: d.s.decimals, _unit: unitShort(d.unit) };
       if (d.v.kind === 'bar') return { ...base, type: 'bar', backgroundColor: color, borderRadius: 2, borderSkipped: 'start', barPercentage: 0.9, categoryPercentage: 0.9, order: 2 };
-      const proj = d.s.projection ? { borderDash: [6, 4], spanGaps: true } : {};
+      const proj = d.s.projection ? { borderDash: [6, 4], spanGaps: true } : d.v.dash ? { borderDash: [5, 3] } : {};
       return { ...base, type: 'line', borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 10, spanGaps: periods.length < 400, tension: 0.15, order: 1, ...proj };
     });
     // Optional (def.avgYears): a dashed line at each series' average over its last N observations, drawn over that window only

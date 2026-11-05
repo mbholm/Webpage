@@ -35,7 +35,7 @@ import time
 import traceback
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -935,6 +935,40 @@ def ind_labor_shares() -> dict:
             "sources": [src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", mn["updated"])]}
 
 
+def growth_accounting(Y: dict, L: dict, K: dict, SH: dict) -> dict:
+    """
+    Labor productivity and total factor productivity from annual {year: value} series: Y value added (volume), L hours worked,
+    K net stock of fixed capital (volume) and SH the labor share (fraction). Used for Mainland Norway and for the country comparisons.
+
+    TFP is in growth form (Törnqvist growth accounting): dlog A = dlog Y - (1-s)*dlog K - s*dlog L, where s is the average of the
+    labor share in the two adjacent years, then cumulated into a level. Levels of chain-linked volumes are not comparable across
+    tables, growth rates are. Labor productivity covers the years with Y and L. The TFP level covers the first unbroken run of
+    years that also have K and SH: a gap in the data ends the cumulated series.
+    """
+    years = sorted(y for y in Y if Y.get(y) and L.get(y))
+    lp = [Y[y] / L[y] for y in years]
+    dlog_a = [None] * len(years)
+    for i in range(1, len(years)):
+        y0, y1 = years[i - 1], years[i]
+        if int(y1) - int(y0) != 1 or not all(d.get(y) for d in (K, SH) for y in (y0, y1)):
+            continue
+        s_bar = 0.5 * (SH[y0] + SH[y1])
+        dlog_a[i] = ((math.log(Y[y1]) - math.log(Y[y0]))
+                     - (1 - s_bar) * (math.log(K[y1]) - math.log(K[y0]))
+                     - s_bar * (math.log(L[y1]) - math.log(L[y0])))
+    tfp = [None] * len(years)
+    start = next((i for i in range(1, len(years)) if dlog_a[i] is not None), None)
+    if start is not None:
+        level = 1.0
+        tfp[start - 1] = level
+        for i in range(start, len(years)):
+            if dlog_a[i] is None:
+                break
+            level *= math.exp(dlog_a[i])
+            tfp[i] = level
+    return {"years": years, "lp": lp, "tfp": tfp, "tfp_growth": [None if g is None else round((math.exp(g) - 1) * 100, 2) for g in dlog_a]}
+
+
 def ind_productivity() -> dict:
     py, sy, my = ssb_series(ssb_data("09189", [("Makrost", ["bnpb.nr23_6fn"]), ("ContentsCode", ["Faste"]), ("Tid", ["from(1970)"])]))
     pl, sl, ml = ssb_series(ssb_data("09174", [("NACE", ["nr23_6fn"]), ("ContentsCode", ["Timeverk"]), ("Tid", ["from(1970)"])]))
@@ -946,31 +980,9 @@ def ind_productivity() -> dict:
     K = dict(zip(pk, sk[("nr23_6fn", "KAPN4")]))
     SH = {y: v / 100 for y, v in zip(ys_, gross_share) if v is not None}          # labor share, fraction
     years = [y for y in py if Y.get(y) and L.get(y) and K.get(y) and SH.get(y)]
-    lp = [Y[y] / L[y] for y in years]                                   # value added per hour, NOK (2023 prices)
     kl = [K[y] / L[y] for y in years]
-    # TFP in growth form (Törnqvist growth accounting): dlog A = dlog Y - (1-s)*dlog K - s*dlog L, where s is the average of the
-    # labor share in the two adjacent years (from the national accounts), then cumulated into a level index.
-    # Levels of chain-linked volumes are not comparable across tables, growth rates are.
-    dlog_a = [None] * len(years)
-    for i in range(1, len(years)):
-        y0, y1 = years[i - 1], years[i]
-        if int(y1) - int(y0) != 1:
-            continue
-        s_bar = 0.5 * (SH[y0] + SH[y1])
-        dlog_a[i] = ((math.log(Y[y1]) - math.log(Y[y0]))
-                     - (1 - s_bar) * (math.log(K[y1]) - math.log(K[y0]))
-                     - s_bar * (math.log(L[y1]) - math.log(L[y0])))
-    tfp = [None] * len(years)
-    level = 1.0
-    for i in range(len(years)):
-        if i == 0:
-            tfp[i] = level
-        elif dlog_a[i] is None:
-            break                                                        # a gap in the data ends the cumulated series
-        else:
-            level *= math.exp(dlog_a[i])
-            tfp[i] = level
-    tfp_growth = [None if g is None else round((math.exp(g) - 1) * 100, 2) for g in dlog_a]
+    ga = growth_accounting({y: Y[y] for y in years}, {y: L[y] for y in years}, K, SH)
+    lp, tfp, tfp_growth = ga["lp"], ga["tfp"], ga["tfp_growth"]         # lp: value added per hour, NOK (2023 prices)
     base = "2000"
     series = {
         "labor_productivity": S("Labor productivity, Mainland Norway: value added per hour worked (2000=100)", "index", "A", years, index_to(lp, years, base), 1, derived=True),
@@ -1384,6 +1396,262 @@ def ind_budget(fund: dict | None = None) -> dict:
                             "The government's proposal, before the Storting's budget settlement.")]}
 
 
+# --------------------------------------------------------------------------- comparisons with other countries
+# Two blocks of six tiles each: Norway against the Nordic countries and against European countries. The figures come from
+# sources that publish all the countries on the same definitions: Eurostat, the BIS (policy rates) and the OECD (bond yields).
+# The exception is Mainland Norway, which only Statistics Norway publishes.
+
+CMP_COUNTRIES = {   # our key: (Eurostat code, BIS code, OECD code, name)
+    "no": ("NO", "NO", "NOR", "Norway"), "se": ("SE", "SE", "SWE", "Sweden"), "dk": ("DK", "DK", "DNK", "Denmark"),
+    "fi": ("FI", None, "FIN", "Finland"), "is": ("IS", "IS", "ISL", "Iceland"), "ea": ("EA", "XM", None, "Euro area"),
+    "de": ("DE", None, "DEU", "Germany"), "fr": ("FR", None, "FRA", "France"), "nl": ("NL", None, "NLD", "Netherlands"),
+    "it": ("IT", None, "ITA", "Italy"), "es": ("ES", None, "ESP", "Spain"), "ch": ("CH", "CH", "CHE", "Switzerland"),
+    "gb": (None, "GB", "GBR", "United Kingdom"),
+}
+CMP_BLOCKS = {"nordic": ["no", "se", "dk", "fi", "is"], "europe": ["no", "ea", "de", "fr", "nl", "it", "es", "ch"]}
+# Policy rates: series key -> whose rate it is (Finland has had the euro area's rate since 1999). Eurostat has no United Kingdom
+# data after 2020, so the United Kingdom appears only where the BIS and the OECD are the sources.
+CMP_POLICY = {"nordic": {"no": "no", "se": "se", "dk": "dk", "fi": "ea", "is": "is"}, "europe": {"no": "no", "ea": "ea", "gb": "gb", "ch": "ch"}}
+CMP_YIELDS = {"nordic": ["no", "se", "dk", "fi", "is"], "europe": ["no", "de", "fr", "nl", "it", "gb", "ch"]}
+EA_CODES = ["EA", "EA21", "EA20"]   # Eurostat's euro area code differs between datasets: the one with the latest data is used
+CMP_EUROSTAT = {
+    "gdp": ("namq_10_gdp", dict(na_item="B1GQ", s_adj="SCA", unit=["CLV_I20", "CLV_PCH_PRE", "CLV_PCH_SM"], sinceTimePeriod="1995-Q1")),
+    "hicp": ("prc_hicp_minr", dict(coicop18=["TOTAL", "TOT_X_NRG_FOOD"], unit="RCH_A", sinceTimePeriod="2000-01")),
+    "une": ("une_rt_m", dict(s_adj="SA", age=["TOTAL", "Y_LT25"], unit="PC_ACT", sex="T", sinceTimePeriod="2000-01")),
+    "emp": ("lfsi_emp_q", dict(indic_em="EMP_LFS", s_adj="SA", age=["Y20-64", "Y15-64"], unit="PC_POP", sex="T", sinceTimePeriod="2000-Q1")),
+    # Inputs to the productivity calculation (national accounts, national currency): value added, hours, capital and income
+    "va": ("nama_10_a10", dict(na_item="B1G", unit="CLV20_MNAC", nace_r2="TOTAL", sinceTimePeriod="1990")),
+    "hours": ("nama_10_a10_e", dict(na_item="EMP_DC", unit="THS_HW", nace_r2="TOTAL", sinceTimePeriod="1990")),
+    "capital": ("nama_10_nfa_st", dict(asset10="N11N", unit="CLV20_MNAC", nace_r2="TOTAL", sinceTimePeriod="1990")),
+    "income": ("nama_10_gdp", dict(na_item=["D1", "B2A3G"], unit="CP_MNAC", sinceTimePeriod="1990")),
+}
+_CMP: dict = {}
+
+
+def trim(periods: list, values: list) -> tuple[list, list]:
+    """Drop the empty observations at both ends of a series."""
+    idx = [i for i, v in enumerate(values) if v is not None]
+    return ([], []) if not idx else (list(periods[idx[0]:idx[-1] + 1]), list(values[idx[0]:idx[-1] + 1]))
+
+
+def cmp_eurostat(name: str) -> tuple[list[str], dict[tuple, list], str]:
+    """One Eurostat call per dataset for all the comparison countries, cached for the run."""
+    if name not in _CMP:
+        dataset, params = CMP_EUROSTAT[name]
+        geos = sorted({c[0] for c in CMP_COUNTRIES.values() if c[0] and c[0] != "EA"}) + EA_CODES
+        _CMP[name] = eurostat(dataset, geo=geos, **params)
+        time.sleep(0.3)
+    return _CMP[name]
+
+
+def cmp_values(name: str, key: str, *codes: str, geo: str | None = None) -> tuple[list[str], list]:
+    """(periods, values) for one country (our key) and the given dimension codes. The country is the last dimension before time.
+    geo names the Eurostat code to use instead of the country's own (to hold the euro area's composition fixed across datasets)."""
+    times, out, _ = cmp_eurostat(name)
+    geo = geo or CMP_COUNTRIES[key][0]
+    best = None
+    for g in (EA_CODES if geo == "EA" else [geo]):
+        hits = [v for k, v in out.items() if k[-1] == g and all(c in k[:-1] for c in codes)]
+        if len(hits) != 1:
+            continue
+        p, v = trim(times, hits[0])
+        if p and (best is None or p[-1] > best[0][-1]):
+            best = (p, v)
+    if best is None:
+        raise KeyError(f"{CMP_EUROSTAT[name][0]}: no data for {geo} {codes}")
+    return best
+
+
+def cmp_src(name: str, title: str, note: str | None = None) -> dict:
+    dataset = CMP_EUROSTAT[name][0]
+    return src(f"Eurostat, {title}", dataset, f"https://ec.europa.eu/eurostat/databrowser/view/{dataset}/default/table", cmp_eurostat(name)[2], note)
+
+
+def _sdmx_csv(url: str) -> dict[str, dict[str, float]]:
+    """{area: {period: value}} from an SDMX csv response with REF_AREA, TIME_PERIOD and OBS_VALUE columns."""
+    raw = http_get(url, {"Accept": "text/csv"}).decode("utf-8-sig", "replace")
+    out: dict[str, dict[str, float]] = {}
+    for r in csv.DictReader(io.StringIO(raw)):
+        try:
+            v = float(r["OBS_VALUE"])
+        except (TypeError, ValueError):
+            continue
+        if not math.isnan(v):
+            out.setdefault(r["REF_AREA"], {})[r["TIME_PERIOD"]] = v
+    time.sleep(0.3)
+    return out
+
+
+def cmp_policy_rates() -> dict[str, tuple[list, list]]:
+    """Central bank policy rates from the BIS, monthly at the end of the month. The current month is the latest daily value."""
+    if "bis" not in _CMP:
+        areas = "+".join(sorted({c[1] for c in CMP_COUNTRIES.values() if c[1]}))
+        url = "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBPOL/1.0/{}." + areas + "?format=csv&startPeriod={}"
+        monthly = _sdmx_csv(url.format("M", "2000-01"))
+        daily = _sdmx_csv(url.format("D", (datetime.now(timezone.utc) - timedelta(days=45)).strftime("%Y-%m-%d")))
+        out = {}
+        for area, m in monthly.items():
+            d = daily.get(area)
+            if d:
+                day = max(d)
+                m[day[:7]] = d[day]
+            ps = sorted(m)
+            out[area] = (ps, [m[p] for p in ps])
+        _CMP["bis"] = out
+    return _CMP["bis"]
+
+
+def cmp_bond_yields() -> dict[str, tuple[list, list]]:
+    """Long-term (10-year) government bond yields from the OECD, monthly averages."""
+    if "oecd" not in _CMP:
+        areas = "+".join(sorted(c[2] for c in CMP_COUNTRIES.values() if c[2]))
+        data = _sdmx_csv(f"https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_FINMARK,/{areas}.M.IRLT.PA.....?startPeriod=2000-01&format=csvfile")
+        _CMP["oecd"] = {a: (sorted(m), [round(m[p], 2) for p in sorted(m)]) for a, m in data.items()}
+    return _CMP["oecd"]
+
+
+def cmp_name(key: str) -> str:
+    return CMP_COUNTRIES[key][3]
+
+
+def cmp_gdp(block: str, gdp: dict | None) -> dict:
+    if not gdp:
+        raise RuntimeError("needs the gdp indicator (Mainland Norway comes from Statistics Norway)")
+    base, base_txt = "2019-Q4", "Q4 2019 = 100"
+    lv, qq = gdp["series"]["level"], gdp["series"]["qoq"]
+    series = {
+        "index_mainland": S(f"GDP, Mainland Norway, volume index ({base_txt})", "index", "Q", lv["periods"], index_to(lv["values"], lv["periods"], base), 1, derived=True,
+                            note="Statistics Norway's seasonally adjusted volume series (table 09190), rebased."),
+        "yoy_mainland": S("GDP, Mainland Norway, volume growth from a year earlier", "percent", "Q", *trim(lv["periods"], pct_change(lv["values"], 4)), 1, derived=True,
+                          note=("Computed from Statistics Norway's seasonally adjusted volume series, to match Eurostat's seasonally adjusted figures for the other "
+                                "countries. It can differ slightly from the unadjusted growth rate in the GDP tile at the top of the page.")),
+        "qoq_mainland": S("GDP, Mainland Norway, quarter-on-quarter volume growth", "percent", "Q", qq["periods"], qq["values"], 1),
+    }
+    for key in CMP_BLOCKS[block]:
+        name = "Norway, total economy" if key == "no" else cmp_name(key)
+        p, v = cmp_values("gdp", key, "CLV_I20")
+        series[f"index_{key}"] = S(f"GDP, {name}, volume index ({base_txt})", "index", "Q", p, index_to(v, p, base), 1)
+        series[f"yoy_{key}"] = S(f"GDP, {name}, volume growth from a year earlier", "percent", "Q", *cmp_values("gdp", key, "CLV_PCH_SM"), 1)
+        series[f"qoq_{key}"] = S(f"GDP, {name}, quarter-on-quarter volume growth", "percent", "Q", *cmp_values("gdp", key, "CLV_PCH_PRE"), 1)
+    return {"series": series,
+            "sources": [cmp_src("gdp", "GDP and main components, quarterly", "Chain-linked volumes, seasonally and calendar adjusted. The index is rebased from 2020 = 100 to " + base_txt + "."),
+                        src("Statistics Norway, quarterly national accounts (Mainland Norway)", "09190", "https://www.ssb.no/en/statbank/table/09190")]}
+
+
+def cmp_inflation(block: str) -> dict:
+    series = {}
+    for key in CMP_BLOCKS[block]:
+        series[f"hicp_{key}"] = S(f"HICP, {cmp_name(key)}, 12-month change", "percent", "M", *cmp_values("hicp", key, "TOTAL"), 1)
+        series[f"core_{key}"] = S(f"HICP excluding energy, food, alcohol and tobacco, {cmp_name(key)}, 12-month change", "percent", "M", *cmp_values("hicp", key, "TOT_X_NRG_FOOD"), 1)
+    return {"series": series,
+            "sources": [cmp_src("hicp", "harmonized index of consumer prices (HICP), monthly",
+                                "The HICP is compiled on the same definitions in every country. It differs from the national consumer price indices, mainly by leaving out owner-occupied housing costs.")]}
+
+
+def cmp_unemployment(block: str) -> dict:
+    series = {}
+    for key in CMP_BLOCKS[block]:
+        series[f"rate_{key}"] = S(f"Unemployment rate, {cmp_name(key)}, ages 15–74", "percent of labor force", "M", *cmp_values("une", key, "TOTAL"), 1)
+        series[f"youth_{key}"] = S(f"Youth unemployment rate, {cmp_name(key)}, under 25", "percent of labor force", "M", *cmp_values("une", key, "Y_LT25"), 1)
+    return {"series": series, "sources": [cmp_src("une", "unemployment by sex and age, monthly", "Labor force survey figures, seasonally adjusted.")]}
+
+
+def cmp_employment(block: str) -> dict:
+    series = {}
+    for key in CMP_BLOCKS[block]:
+        series[f"rate2064_{key}"] = S(f"Employment rate, {cmp_name(key)}, ages 20–64", "percent of population", "Q", *cmp_values("emp", key, "Y20-64"), 1)
+        series[f"rate1564_{key}"] = S(f"Employment rate, {cmp_name(key)}, ages 15–64", "percent of population", "Q", *cmp_values("emp", key, "Y15-64"), 1)
+    return {"series": series, "sources": [cmp_src("emp", "employment and labor force by sex and age, quarterly", "Labor force survey figures, seasonally adjusted.")]}
+
+
+def cmp_growth_accounting(key: str) -> tuple[dict, dict]:
+    """Growth accounting for one country from its national accounts at Eurostat: (growth_accounting result, labor share by year).
+    The labor share is compensation of employees over compensation plus gross operating surplus and mixed income, which is the
+    same ratio as for Mainland Norway (gross operating surplus is the net surplus plus consumption of fixed capital)."""
+    if ("ga", key) not in _CMP:
+        found = None
+        for code in (["EA21", "EA20"] if key == "ea" else [None]):   # one euro area composition for all four datasets
+            def get(name, *codes):
+                try:
+                    return dict(zip(*cmp_values(name, key, *codes, geo=code)))
+                except KeyError:
+                    return {}
+            Y, L, K, W, O = get("va"), get("hours"), get("capital"), get("income", "D1"), get("income", "B2A3G")
+            if not (Y and L):
+                continue
+            SH = {y: W[y] / (W[y] + O[y]) for y in sorted(W) if O.get(y) is not None and W[y] + O[y] > 0}
+            if found is None or K:
+                found = (growth_accounting(Y, L, K, SH), SH)
+            if K:
+                break
+        if found is None:
+            raise KeyError(f"no value added and hours for {key}")
+        _CMP[("ga", key)] = found
+    return _CMP[("ga", key)]
+
+
+def cmp_productivity(block: str, prod: dict | None) -> dict:
+    if not prod:
+        raise RuntimeError("needs the productivity indicator (Mainland Norway comes from Statistics Norway)")
+    base = "2000"
+    m = prod["series"]
+    since = lambda s: ([p for p in s["periods"] if p >= "1990"], [v for p, v in zip(s["periods"], s["values"]) if p >= "1990"])
+    series = {
+        "lp_mainland": S("Labor productivity, Mainland Norway: value added per hour worked (2000 = 100)", "index", "A", *since(m["labor_productivity"]), 1, derived=True),
+        "lpg_mainland": S("Labor productivity growth, Mainland Norway", "percent", "A", *since(m["labor_productivity_growth"]), 1, derived=True),
+        "tfp_mainland": S("Total factor productivity, Mainland Norway (2000 = 100)", "index", "A", *since(m["tfp"]), 1, derived=True),
+        "tfpg_mainland": S("TFP growth, Mainland Norway", "percent", "A", *since(m["tfp_growth"]), 1, derived=True),
+        "share_mainland": S("Labor share used as weight, Mainland Norway", "percent", "A", *since(m["labor_share"]), 1, derived=True),
+    }
+    no_capital = []
+    for key in CMP_BLOCKS[block]:
+        name = "Norway, total economy" if key == "no" else cmp_name(key)
+        ga, SH = cmp_growth_accounting(key)
+        years = ga["years"]
+        series[f"lp_{key}"] = S(f"Labor productivity, {name}: value added per hour worked (2000 = 100)", "index", "A", years, index_to(ga["lp"], years, base), 1, derived=True)
+        series[f"lpg_{key}"] = S(f"Labor productivity growth, {name}", "percent", "A", *trim(years, pct_change(ga["lp"], 1)), 1, derived=True)
+        if any(v is not None for v in ga["tfp"]):
+            series[f"tfp_{key}"] = S(f"Total factor productivity, {name} (2000 = 100)", "index", "A", *trim(years, index_to(ga["tfp"], years, base)), 1, derived=True)
+            series[f"tfpg_{key}"] = S(f"TFP growth, {name}", "percent", "A", *trim(years, ga["tfp_growth"]), 1, derived=True)
+        else:
+            no_capital.append(name)
+        series[f"share_{key}"] = S(f"Labor share used as weight, {name}", "percent", "A", sorted(SH), [round(100 * SH[y], 1) for y in sorted(SH)], 1, derived=True)
+    method = ("Every series in this tile is my own calculation from national accounts data, with the same method for every country as in the productivity tile "
+              "for Mainland Norway. Labor productivity is gross value added at constant prices divided by total hours worked. TFP is computed by growth accounting "
+              "(Törnqvist index) from a Cobb-Douglas production function. Annual TFP growth is Δlog A = Δlog Y − (1 − s̄) Δlog K − s̄ Δlog L, where s̄ is the average of "
+              "the labor share in the two adjacent years, and the index is the cumulated growth rates set to 100 in 2000. Y is gross value added at constant prices, "
+              "L is total hours worked and K is the net stock of fixed assets at constant prices. The labor share is compensation of employees divided by compensation "
+              "of employees plus gross operating surplus and mixed income. For Mainland Norway the data are Statistics Norway's national accounts. For the other "
+              "countries, and for Norway's total economy, they are the national accounts as published by Eurostat, for the whole economy. TFP ends where the capital "
+              "stock ends, which is earlier than the other series for some countries. "
+              + (f"Eurostat has no capital stock at constant prices for {' and '.join(no_capital)}, so TFP is missing there. " if no_capital else "")
+              + "No adjustment is made for capacity utilization, labor quality or the labor income of the self-employed (which is part of mixed income).")
+    return {"series": series, "method": method,
+            "sources": [cmp_src("va", "gross value added by industry, annual national accounts", "Total economy, chain-linked volumes."),
+                        cmp_src("hours", "employment by industry, annual national accounts", "Hours worked, total employment, domestic concept."),
+                        cmp_src("capital", "capital stocks by industry and asset type", "Net stock of total fixed assets, chain-linked volumes."),
+                        cmp_src("income", "GDP and main components, annual", "Compensation of employees and gross operating surplus and mixed income, current prices."),
+                        src("Statistics Norway, annual national accounts (Mainland Norway)", "09189", "https://www.ssb.no/en/statbank/table/09189",
+                            note="Also tables 09174 (hours), 09181 (capital) and 09170 (income), as in the productivity tile at the top of the page.")]}
+
+
+def cmp_rates(block: str) -> dict:
+    policy, yields = cmp_policy_rates(), cmp_bond_yields()
+    series = {}
+    for key, whose in CMP_POLICY[block].items():
+        p, v = policy[CMP_COUNTRIES[whose][1]]
+        label = f"Policy rate, {cmp_name(key)}" + ("" if key == whose else " (the euro area’s rate, set by the European Central Bank)")
+        series[f"policy_{key}"] = S(label, "percent", "M", p, v, 2)
+    for key in CMP_YIELDS[block]:
+        p, v = yields[CMP_COUNTRIES[key][2]]
+        series[f"gov10y_{key}"] = S(f"10-year government bond yield, {cmp_name(key)}", "percent", "M", p, v, 2)
+    return {"series": series,
+            "sources": [src("Bank for International Settlements, central bank policy rates", "WS_CBPOL", "https://data.bis.org/topics/CBPOL",
+                            note=("End of month, and the latest daily value for the current month. The BIS picks each central bank’s main policy rate. For the euro area "
+                                  "it is the deposit facility rate from September 2024 and the main refinancing rate before that.")),
+                        src("OECD, long-term interest rates (Main Economic Indicators)", "DSD_STES@DF_FINMARK", "https://data-explorer.oecd.org/vis?df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_STES%40DF_FINMARK&df[ag]=OECD.SDD.STES",
+                            note="Monthly averages of yields on government bonds with about ten years to maturity.")]}
+
 # --------------------------------------------------------------------------- main
 
 def main() -> int:
@@ -1450,6 +1718,13 @@ def main() -> int:
     run("wages", ind_wages)
     run("labor_shares", ind_labor_shares)
     run("inequality", ind_inequality, previous.get("inequality"))
+    for block in CMP_BLOCKS:   # Norway against the Nordic countries and against European countries
+        run(f"{block}_gdp", cmp_gdp, block, indicators.get("gdp"))
+        run(f"{block}_inflation", cmp_inflation, block)
+        run(f"{block}_rates", cmp_rates, block)
+        run(f"{block}_unemployment", cmp_unemployment, block)
+        run(f"{block}_employment", cmp_employment, block)
+        run(f"{block}_productivity", cmp_productivity, block, indicators.get("productivity"))
 
     OUT.parent.mkdir(exist_ok=True)
     payload = {"generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "errors": errors, "kept": kept, "indicators": indicators}
