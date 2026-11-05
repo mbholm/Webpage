@@ -326,9 +326,9 @@
       }),
       mk('inflation', {
         title: 'Inflation',
-        desc: 'Twelve-month change in the harmonized index of consumer prices (HICP), which is compiled on the same definitions in every country and published by Eurostat. It differs from the national consumer price index in the inflation tile at the top of the page, mainly because it leaves out owner-occupied housing costs. Dashed lines show core inflation, i.e. the HICP excluding energy, food, alcohol and tobacco.',
-        compare: { rows: rows(C, 'hicp'), fmt: (v) => fmt.pct(v), sub: 'HICP, 12-month change' }, sparkZero: true,
-        views: [...views(C, 'hicp', 'HICP, all items', { on: true }), ...views(C, 'core', 'Core: excluding energy, food, alcohol and tobacco', { dash: true, tip: 'core' })],
+        desc: 'Twelve-month change in the harmonized index of consumer prices (HICP), which is compiled on the same definitions in every country and published by Eurostat. It differs from the national consumer price index in the inflation tile at the top of the page, mainly because it leaves out owner-occupied housing costs. The headline is core inflation, i.e. the HICP excluding energy, food, alcohol and tobacco. Dashed lines show the HICP for all items.',
+        compare: { rows: rows(C, 'core'), fmt: (v) => fmt.pct(v), sub: 'core HICP, 12-month change' }, sparkZero: true,
+        views: [...views(C, 'core', 'Core: excluding energy, food, alcohol and tobacco', { on: true, tip: 'core' }), ...views(C, 'hicp', 'HICP, all items', { dash: true, tip: 'all items' })],
         defaultYears: 10,
       }),
       mk('rates', {
@@ -354,10 +354,10 @@
       }),
       mk('productivity', {
         title: 'Productivity',
-        desc: 'Labor productivity (value added per hour worked) and total factor productivity, computed from each country’s national accounts with the same method as in the productivity tile for Mainland Norway. TFP growth comes from growth accounting, weighting hours and capital by the labor share observed in each country’s national accounts. Norway is shown as Mainland Norway because oil and gas production distorts the total. The total is available as a dashed line. The indices are set to 100 in 2000. TFP needs a capital stock, which ends earlier than the other series for some countries and is missing for Iceland and Switzerland.',
-        compare: { rows: rows(M, 'lpg'), fmt: (v) => fmt.signedPct(v), sub: 'labor productivity growth' }, sparks: rows(M, 'lp'),
-        views: [...views(M, 'lp', 'Labor productivity, index 2000 = 100', { on: true, tip: 'labor productivity' }), ...views(M, 'tfp', 'Total factor productivity, index 2000 = 100', { tip: 'TFP' }),
-                ...views(M, 'lpg', 'Labor productivity growth', { tip: 'labor productivity growth' }), ...views(M, 'tfpg', 'TFP growth', { tip: 'TFP growth' }),
+        desc: 'Total factor productivity and labor productivity (value added per hour worked), computed from each country’s national accounts with the same method as in the productivity tile for Mainland Norway. TFP growth comes from growth accounting, weighting hours and capital by the labor share observed in each country’s national accounts. Norway is shown as Mainland Norway because oil and gas production distorts the total. The total is available as a dashed line. The indices are set to 100 in 2000. TFP needs a capital stock, which ends earlier than the other series for some countries and is missing for Iceland and Switzerland.',
+        compare: { rows: rows(M, 'tfpg'), fmt: (v) => fmt.signedPct(v), sub: 'total factor productivity growth' }, sparks: rows(M, 'tfp'),
+        views: [...views(M, 'tfp', 'Total factor productivity, index 2000 = 100', { on: true, tip: 'TFP' }), ...views(M, 'lp', 'Labor productivity, index 2000 = 100', { tip: 'labor productivity' }),
+                ...views(M, 'tfpg', 'TFP growth', { tip: 'TFP growth' }), ...views(M, 'lpg', 'Labor productivity growth', { tip: 'labor productivity growth' }),
                 ...views(M, 'share', 'Labor share used as weight', { tip: 'labor share' })],
         defaultYears: 30, showMethod: true,
       }),
