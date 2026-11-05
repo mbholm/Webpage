@@ -3,6 +3,8 @@ name: Build and deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "20 6 * * *"   # every morning 06:20 UTC: refresh the dashboard data and redeploy
   workflow_dispatch:
 
 permissions:
@@ -24,6 +26,9 @@ jobs:
           python-version: "3.12"
       - name: Regenerate "Recent" lists on the home page
         run: python build_recent.py
+      - name: Fetch fresh dashboard data (SSB, Norges Bank, NBIM)
+        run: python build_dashboard_data.py
+        continue-on-error: true   # a source outage must not block the deploy; the committed data/dashboard.json is the fallback
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -10,6 +10,8 @@ research.html       Working papers, R&Rs, publications
 reports.html        Policy Reports
 op-eds.html         Newspaper commentary, grouped by year
 normac-2026.html    Conference page
+dashboard.html      Norway macro dashboard (+ dashboard.js, dashboard.css, data/dashboard.json)
+build_dashboard_data.py  Fetches the dashboard data from SSB, Norges Bank and NBIM
 404.html            Not-found page (GitHub Pages picks it up automatically)
 style.css           All styling (light + dark mode, mobile, print)
 site.js             Builds the mailto link at runtime (anti-spam)
@@ -55,6 +57,32 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 - When a paper changes status on `research.html`, make the same change in the CV so the two stay in step.
 - A Teaching section is at the bottom of the file, commented out. Uncomment it for applications.
 - `cv/build/` (LaTeX by-products) and `cv/archive/` (the two pre-merge source files) are ignored by Git.
+
+### The Norway dashboard (dashboard.html)
+
+A one-page dashboard of Norwegian macro indicators (GDP, inflation, unemployment, interest rates, the
+krone, trade balance, current account, the oil fund, house prices, productivity). Three files:
+
+- `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
+  (SDMX API) and NBIM, computes the derived series (TFP, labour productivity, ratios to GDP, growth
+  rates) and writes `data/dashboard.json`. Each indicator is fetched independently; if one source fails,
+  that indicator keeps the previous data and the error is recorded in the JSON.
+- `dashboard.js` holds the display definitions (titles, descriptions, which series a tile shows, which
+  are offered in the detail view) keyed by the same indicator ids, and renders the page.
+- `dashboard.css` holds the page's styles, including the chart palette.
+
+The browser cannot query SSB directly (no cross-origin header), so the data is pre-fetched: the deploy
+workflow runs `build_dashboard_data.py` on every push **and every morning at 06:20 UTC** (schedule in
+`.github/workflows/pages.yml`), so the live site refreshes daily without any commits. The committed
+`data/dashboard.json` is the fallback if a fetch fails in CI. To refresh locally:
+
+```
+python build_dashboard_data.py
+```
+
+To preview, serve over http (`python -m http.server 8000`); the page loads the JSON with fetch().
+To add an indicator: write an `ind_*` function in the build script and a matching entry in `DEFS` in
+`dashboard.js`. Table ids and variable codes must be verified against the API metadata, not guessed.
 
 ### Adding an op-ed
 
