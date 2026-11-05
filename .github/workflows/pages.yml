@@ -29,6 +29,10 @@ jobs:
       - name: Fetch fresh dashboard data (SSB, Norges Bank, NBIM)
         run: python build_dashboard_data.py
         continue-on-error: true   # a source outage must not block the deploy; the committed data/dashboard.json is the fallback
+      - name: Stamp stylesheet and script links with the commit id
+        # Browsers keep old copies of .css/.js files; a new ?v= on every commit makes them fetch the new ones.
+        run: |
+          sed -i -E "s/(href|src)=\"(style\.css|dashboard\.css|site\.js|dashboard\.js)(\?v=[^\"]*)?\"/\1=\"\2?v=${GITHUB_SHA::8}\"/g" *.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

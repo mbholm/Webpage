@@ -80,7 +80,7 @@
     },
     {
       id: 'employment', title: 'Employment', kicker: 'Labour market', goodUp: true,
-      desc: 'Employed persons as a share of the population, from the Labour Force Survey (LFS). Monthly series are seasonally adjusted three-month moving averages dated by the middle month; the quarterly series break the employment rate down by age group and sex. Participation is the labour force as a share of the population.',
+      desc: 'Employed persons as a share of the population, from the Labour Force Survey (LFS). Monthly series are seasonally adjusted three-month moving averages dated by the middle month. The quarterly series break the employment rate down by age group and sex. Participation is the labour force as a share of the population.',
       headline: { series: 'employment_rate', fmt: (v) => fmt.pct(v), sub: 'employment rate, 15–74, 3-month average' },
       secondary: [{ series: 'participation', label: 'participation', fmt: fmt.pct }],
       spark: 'employment_rate',
@@ -98,7 +98,7 @@
     },
     {
       id: 'rates', title: 'Interest rates', kicker: 'Monetary policy', goodUp: null,
-      desc: 'Norges Bank’s policy rate (the sight deposit rate), the NOWA overnight money-market rate and generic government yields. Monthly averages give the long history; the daily series cover recent years and cannot be mixed with the monthly ones in the same chart. The dashed line is Norges Bank’s own policy rate forecast from the latest Monetary Policy Report.',
+      desc: 'Norges Bank’s policy rate (the sight deposit rate), the NOWA overnight money-market rate and generic government yields. Monthly averages give the long history. The daily series cover recent years and cannot be mixed with the monthly ones in the same chart. The dashed line is Norges Bank’s own policy rate forecast from the latest Monetary Policy Report.',
       headline: { series: 'policy_rate_daily', fmt: (v) => fmt.pct(v, 2), sub: 'policy rate' },
       secondary: [{ series: 'gov10y_daily', label: '10-year yield', fmt: (v) => fmt.pct(v, 2) }],
       spark: 'policy_rate',
@@ -110,7 +110,7 @@
     },
     {
       id: 'fx', title: 'Exchange rates', kicker: 'The krone', goodUp: null,
-      desc: 'The import-weighted krone index I-44 (higher means a weaker krone) and the krone against the euro and the US dollar. Monthly averages give the long history; the daily series cover recent years.',
+      desc: 'The import-weighted krone index I-44 (higher means a weaker krone) and the krone against the euro and the US dollar. Monthly averages give the long history. The daily series cover recent years.',
       headline: { series: 'i44_daily', fmt: (v) => fmt.plain(v, 1), sub: 'I-44 index, 1995 = 100 (higher = weaker krone)' },
       secondary: [{ series: 'eurnok_daily', label: 'EUR', fmt: (v) => fmt.plain(v, 2) }, { series: 'usdnok_daily', label: 'USD', fmt: (v) => fmt.plain(v, 2) }],
       spark: 'i44',
@@ -120,7 +120,7 @@
     },
     {
       id: 'trade', title: 'Trade balance', kicker: 'External trade', goodUp: null,
-      desc: 'Monthly trade in goods, seasonally adjusted. The total balance is dominated by oil and gas; the mainland balance compares exports excluding oil, gas, ships and platforms with imports excluding ships and platforms.',
+      desc: 'Monthly trade in goods, seasonally adjusted. The total balance is dominated by oil and gas. The mainland balance compares exports excluding oil, gas, ships and platforms with imports excluding ships and platforms.',
       headline: { series: 'balance', fmt: (v) => fmt.bnFromMn(v), sub: 'goods, seasonally adjusted, per month' },
       secondary: [{ series: 'mainland_balance', label: 'mainland balance', fmt: fmt.bnFromMn }],
       spark: 'balance', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
@@ -140,13 +140,16 @@
     },
     {
       id: 'oil_fund', title: 'The oil fund', kicker: 'Government Pension Fund Global', goodUp: true,
-      desc: 'Market value of the Government Pension Fund Global at year-end, by asset class, as published by NBIM. The current year shows the latest value NBIM has published, not a year-end value. Management costs are the annual costs of running the fund, in kroner.',
+      desc: 'Market value of the Government Pension Fund Global at year-end, by asset class, as published by NBIM. The current year shows the latest value NBIM has published, not a year-end value. The asset classes are also shown as shares of the fund. Management costs are the annual costs of running the fund, as a share of assets under management and in kroner.',
       headline: { series: 'value', fmt: (v) => fmt.trnFromBn(v), sub: 'market value', latestLabel: 'latest' },
       secondary: [{ series: 'pct_gdp', label: 'of GDP', fmt: (v) => fmt.pct(v, 0) }],
       spark: 'value', unitLabel: 'NOK bn',
-      views: [{ s: 'value', short: 'Total', kind: 'line', on: true }, { s: 'equity', short: 'Equity', kind: 'line' }, { s: 'fixed_income', short: 'Fixed income', kind: 'line' }, { s: 'real_estate', short: 'Real estate', kind: 'line' },
-              { s: 'renewables', short: 'Renewable infrastructure', kind: 'line' }, { s: 'pct_gdp', short: '% of GDP', kind: 'bar' },
-              { s: 'costs', short: 'Management costs', kind: 'bar' }],
+      views: [{ s: 'value', short: 'Total', kind: 'line', on: true, group: 'Market value' }, { s: 'equity', short: 'Equity', kind: 'line', group: 'Market value' },
+              { s: 'fixed_income', short: 'Fixed income', kind: 'line', group: 'Market value' }, { s: 'real_estate', short: 'Real estate', kind: 'line', group: 'Market value' },
+              { s: 'renewables', short: 'Renewable infrastructure', kind: 'line', group: 'Market value' }, { s: 'pct_gdp', short: 'Total, % of GDP', kind: 'bar', group: 'Market value' },
+              { s: 'share_equity', short: 'Equity', kind: 'line', group: 'Share of the fund' }, { s: 'share_fixed_income', short: 'Fixed income', kind: 'line', group: 'Share of the fund' },
+              { s: 'share_real_estate', short: 'Real estate', kind: 'line', group: 'Share of the fund' }, { s: 'share_renewables', short: 'Renewable infrastructure', kind: 'line', group: 'Share of the fund' },
+              { s: 'cost_share', short: 'Share of the fund', kind: 'bar', group: 'Management costs' }, { s: 'costs', short: 'NOK million', kind: 'bar', group: 'Management costs' }],
       defaultYears: 30,
     },
     {
@@ -192,15 +195,15 @@
     },
     {
       id: 'labour_shares', title: 'Labour shares', kicker: 'Income distribution', goodUp: null,
-      desc: 'The share of factor income that goes to labour, by industry, computed from the annual national accounts. The gross labour share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus; the net labour share leaves capital consumption out of the denominator. The headline is Mainland Norway excluding general government.',
+      desc: 'The share of factor income that goes to labour, by industry, computed from the annual national accounts. The gross labour share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus. The net labour share leaves capital consumption out of the denominator. The headline is Mainland Norway excluding general government. The common component for manufacturing is the first principal component of the sectoral labour shares, computed in real time as in Holm and Jasinski (Samfunnsøkonomen). Dashed lines show each series’ average over the past 30 years.',
       headline: { series: 'gross_business', fmt: (v) => fmt.pct(v), sub: 'gross labour share, mainland business sector' },
       secondary: [{ series: 'net_business', label: 'net', fmt: fmt.pct }],
       spark: 'gross_business',
-      views: ['gross', 'net'].flatMap((g) => [['business', 'Mainland excl. government'], ['mfg', 'Manufacturing'], ['mainland', 'Mainland Norway'], ['total', 'Total economy'], ['oilgas', 'Oil and gas'],
+      views: ['gross', 'net'].flatMap((g) => [['business', 'Mainland excl. government'], ['mfg', 'Manufacturing'], ['pc', 'Manufacturing, common component'], ['mainland', 'Mainland Norway'], ['total', 'Total economy'], ['oilgas', 'Oil and gas'],
                   ['construction', 'Construction'], ['trade', 'Trade'], ['transport', 'Transport'], ['accommodation', 'Accommodation and food'], ['ict', 'Information and communication'],
                   ['finance', 'Finance'], ['professional', 'Professional services']]
-                .map(([k, t]) => ({ s: `${g}_${k}`, short: t, kind: 'line', on: k === 'business' || k === 'mfg', group: g === 'gross' ? 'Gross labour share' : 'Net labour share' }))),
-      defaultYears: 30, showMethod: true,
+                .map(([k, t]) => ({ s: `${g}_${k}`, short: t, tip: `${g === 'gross' ? 'Gross' : 'Net'}, ${t}`, kind: 'line', on: k === 'business' || k === 'mfg', group: g === 'gross' ? 'Gross labour share' : 'Net labour share' }))),
+      defaultYears: 30, showMethod: true, avgYears: 30,
     },
   ];
 
@@ -210,7 +213,7 @@
   fetch('data/dashboard.json', { cache: 'no-cache' })
     .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then((d) => { DATA = d; renderMeta(); renderTiles(); openFromHash(); })
-    .catch((e) => { tilesEl.innerHTML = `<p class="d-error">Could not load the data file (${e.message}). If you opened this page from disk, serve it over http; the data is loaded with fetch().</p>`; });
+    .catch((e) => { tilesEl.innerHTML = `<p class="d-error">Could not load the data file (${e.message}). If you opened this page from disk, serve it over http. The data is loaded with fetch().</p>`; });
 
   function renderMeta() {
     const el = document.getElementById('dash-meta');
@@ -427,7 +430,7 @@
       const s = state.ind.series[v.s];
       const map = new Map(s.periods.map((p, i) => [p, s.values[i]]));
       const scale = (state.def.scale && s.unit.startsWith('NOK million')) ? state.def.scale : 1;
-      return { v, s, slot: slotFor(state.def, v), scale, label: viewLabel(v, s),
+      return { v, s, slot: slotFor(state.def, v), scale, label: v.tip || viewLabel(v, s),
                unit: scale !== 1 ? state.def.unitLabel : s.unit,
                data: periods.map((p) => (map.has(p) && map.get(p) != null ? map.get(p) * scale : null)) };
     });
@@ -504,16 +507,33 @@
       const proj = d.s.projection ? { borderDash: [6, 4], spanGaps: true } : {};
       return { ...base, type: 'line', borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 10, spanGaps: periods.length < 400, tension: 0.15, order: 1, ...proj };
     });
+    // Optional (def.avgYears): a dashed line at each series' average over its last N observations, drawn over that window only
+    const avgs = [];
+    if (state.def.avgYears) {
+      datasets.forEach((d) => {
+        if (d.v.kind !== 'line' || d.s.projection) return;
+        const obs = d.s.periods.map((p, i) => [p, d.s.values[i]]).filter(([, v]) => v != null).slice(-state.def.avgYears);
+        if (obs.length < 2) return;
+        const mean = (obs.reduce((a, [, v]) => a + v, 0) / obs.length) * d.scale;
+        const win = new Set(obs.map(([p]) => p));
+        ds.push({ label: `${d.label}, average`, data: periods.map((p) => (win.has(p) ? mean : null)), _avg: true, type: 'line', borderColor: cssVar(SLOTS[d.slot % 8]),
+                  borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0, spanGaps: true, order: 0 });
+        avgs.push({ d, mean, from: obs[0][0], to: obs[obs.length - 1][0] });
+      });
+    }
     const inflationKeys = ['cpi_yoy', 'cpiate_yoy', 'cpiat_yoy', 'proj_cpi', 'proj_cpiate'];
     const showTarget = state.def.target && datasets.some((d) => inflationKeys.includes(d.v.s)) && datasets.every((d) => inflationKeys.includes(d.v.s));
     const opts = baseOptions(periods, unit, { crosshair: {}, targetLine: showTarget ? { value: state.def.target, label: 'Target 2 %' } : {} });
+    opts.plugins.tooltip.filter = (it) => !it.dataset._avg;   // the averages are read from the legend, not the tooltip
     const emphasiseZero = datasets.some((d) => d.v.kind === 'bar' || d.data.some((v) => v != null && v < 0));
     if (emphasiseZero) opts.scales.y.grid.color = (ctx) => (ctx.tick.value === 0 ? cssVar('--viz-axis') : cssVar('--viz-grid'));
     const ctx = document.getElementById('d-canvas').getContext('2d');
     if (chart) chart.destroy();
     chart = new Chart(ctx, { type: 'line', data: { labels: periods, datasets: ds }, options: opts, plugins: [crosshair, targetLine] });
     document.getElementById('d-legend').innerHTML = datasets.map((d) =>
-      `<span><span class="sw ${d.v.kind}" style="${swatchStyle(state.def, d.v, d.s)}"></span>${d.s.label}${d.s.derived ? ' *' : ''}</span>`).join('');
+      `<span><span class="sw ${d.v.kind}" style="${swatchStyle(state.def, d.v, d.s)}"></span>${d.s.label}${d.s.derived ? ' *' : ''}</span>`).join('')
+      + avgs.map(({ d, mean, from, to }) =>
+        `<span><span class="sw line" style="background:repeating-linear-gradient(90deg, var(${SLOTS[d.slot % 8]}) 0 4px, transparent 4px 7px)"></span>${d.label}: average ${from}–${to}, ${fmt.num(mean, d.s.decimals)}${unitShort(d.unit) ? ' ' + unitShort(d.unit) : ''}</span>`).join('');
     if (state.table) drawTable();
   }
 

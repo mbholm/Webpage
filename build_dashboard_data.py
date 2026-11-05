@@ -309,7 +309,7 @@ def nav_registered() -> tuple[dict, dict]:
         "nav_count": S("Registered fully unemployed, NAV (seasonally adjusted)", "persons", "M", p_n, v_n, 0),
     }
     source = src("NAV, Hovedtall om arbeidsmarkedet", None, page, None,
-                 ("Registered fully unemployed as a share of the labour force; the seasonally adjusted series start in 2011 (2017 for the gross measure). "
+                 ("Registered fully unemployed as a share of the labour force. The seasonally adjusted series start in 2011 (2017 for the gross measure). "
                   "Statistics for April to July 2025 are affected by NAV's change of job-seeker register."
                   + (f" Edition: {edition.group(1)}." if edition else "")))
     return series, source
@@ -454,7 +454,7 @@ def proj_series(proj: dict, name: str, label: str, decimals: int) -> dict:
     pts = sorted((k, v) for k, v in proj["data"][name].items() if k >= proj["anchor"])
     return S(f"{label}, Norges Bank projection (MPR {proj['report']})", "per cent", "M",
              [f"{y}-{mid[q]}" for (y, q), _ in pts], [round(v, decimals) for _, v in pts], decimals, projection=True,
-             note=f"Quarterly projections from Monetary Policy Report {proj['report']}, from the quarter of publication onwards; the first point is the preceding quarter. Each quarter is plotted at its middle month.")
+             note=f"Quarterly projections from Monetary Policy Report {proj['report']}, from the quarter of publication onwards. The first point is the preceding quarter. Each quarter is plotted at its middle month.")
 
 
 def add_projections(result: dict, proj: dict | None, prev: dict | None, items: list) -> dict:
@@ -462,7 +462,7 @@ def add_projections(result: dict, proj: dict | None, prev: dict | None, items: l
         for key, name, label, dec in items:
             result["series"][key] = proj_series(proj, name, label, dec)
         result["sources"].append(src(f"Norges Bank, Monetary Policy Report {proj['report']}", None, proj["url"], proj.get("published"),
-                                     "Projections from the quarter of publication; quarterly values plotted at the middle month of each quarter."))
+                                     "Projections from the quarter of publication. Quarterly values plotted at the middle month of each quarter."))
     elif prev:   # keep the last successfully fetched projections
         for key, *_ in items:
             if key in prev.get("series", {}):
@@ -520,7 +520,7 @@ def ind_trade() -> dict:
                 "exports": S("Exports of goods (seasonally adjusted)", "NOK million", "M", per, g("Etot"), 0),
                 "imports": S("Imports of goods (seasonally adjusted)", "NOK million", "M", per, g("Itot"), 0),
                 "oilgas_exports": S("Exports of crude oil, natural gas and condensates (seasonally adjusted)", "NOK million", "M", per, g("Eoljegass"), 0),
-                "mainland_exports": S("Mainland exports (excl. oil, gas, ships and platforms; seasonally adjusted)", "NOK million", "M", per, g("Etotusorn"), 0),
+                "mainland_exports": S("Mainland exports (excl. oil, gas, ships and platforms, seasonally adjusted)", "NOK million", "M", per, g("Etotusorn"), 0),
                 "imports_ex_ships": S("Imports excl. ships and oil platforms (seasonally adjusted)", "NOK million", "M", per, g("Itotuso"), 0),
                 "mainland_balance": S("Mainland trade balance (mainland exports minus imports excl. ships and platforms)", "NOK million", "M", per, g("Hbtusorn"), 0)},
             "sources": [src("Statistics Norway, external trade in goods", "08864", "https://www.ssb.no/en/statbank/table/08864", m["updated"])]}
@@ -558,7 +558,7 @@ def ind_current_account(gdp: dict | None) -> dict:
 NBIM_COSTS_REPORTED = {2011: 2.5, 2012: 2.2, 2013: 2.9, 2014: 3.2, 2015: 3.9, 2016: 3.7, 2017: 4.7, 2018: 4.5, 2019: 4.3, 2020: 5.3,
                        2021: 4.6, 2022: 5.2, 2023: 6.6, 2024: 7.4, 2025: 7.5}
 NBIM_COST_BP = {1998: 5.1, 1999: 8.7, 2000: 10.9, 2001: 7.4, 2002: 9.1, 2003: 10.4, 2004: 10.5, 2005: 10.6, 2006: 9.8, 2007: 9.3,
-                2008: 10.6, 2009: 13.8, 2010: 10.5}
+                2008: 10.6, 2009: 13.8, 2010: 10.5, 2011: 8.1, 2012: 6.2, 2013: 6.6, 2014: 5.9, 2015: 5.7, 2016: 5.2, 2017: 6.0}
 
 
 def ind_oil_fund(gdp: dict | None) -> dict:
@@ -609,11 +609,32 @@ def ind_oil_fund(gdp: dict | None) -> dict:
                         note=("2011 onwards: total management costs in Norges Bank as stated in NBIM's annual reports, to the nearest NOK 100 million. "
                               "1998–2010: estimated as NBIM's published cost ratio (basis points of assets under management) times the average of the "
                               "opening and closing market value, so these years are approximate."))
+    # Costs as a share of the fund: NBIM's own ratio where it is published with enough precision, otherwise costs over average market value
+    sy, sv = [], []
+    for y in sorted(set(NBIM_COST_BP) | set(NBIM_COSTS_REPORTED)):
+        if y in NBIM_COST_BP:
+            v = NBIM_COST_BP[y] / 100
+        else:
+            a, b = value.get(str(y - 1)), value.get(str(y))
+            if a is None or b is None:
+                continue
+            v = NBIM_COSTS_REPORTED[y] / ((a + b) / 2) * 100
+        sy.append(str(y))
+        sv.append(round(v, 3))
+    series["cost_share"] = S("Management costs, share of the fund", "per cent of assets under management", "A", sy, sv, 3, derived=True,
+                             note=("1998–2017: NBIM's published cost ratio. 2018 onwards: reported costs divided by the average of the opening and "
+                                   "closing market value, because NBIM states the ratio to two decimals only."))
+    # Asset classes as shares of the fund
+    for key, name in (("equity", "Equity"), ("fixed_income", "Fixed income"), ("real_estate", "Real estate"), ("renewables", "Renewable energy infrastructure")):
+        if key in series:
+            p, v = series[key]["periods"], series[key]["values"]
+            series["share_" + key] = S(f"{name}, share of the fund", "per cent of market value", "A", p,
+                                       [None if (x is None or not value.get(y)) else round(100 * x / value[y], 1) for y, x in zip(p, v)], 1, derived=True)
     return {"series": series,
             "sources": [src("Norges Bank Investment Management, the fund's value", None, url, None,
-                            "Year-end values read from the chart on NBIM's page; NBIM publishes no open data API."),
+                            "Year-end values read from the chart on NBIM's page. NBIM publishes no open data API."),
                         src("Norges Bank Investment Management, annual reports", None, "https://www.nbim.no/en/news-and-insights/reports/", None,
-                            "Management costs are not published as data; the figures are transcribed from the annual reports and updated once a year.")]}
+                            "Management costs are not published as data. The figures are transcribed from the annual reports and updated once a year.")]}
 
 
 def ind_house_prices() -> dict:
@@ -736,25 +757,114 @@ def ind_wages() -> dict:
                         src("Statistics Norway, annual earnings by industry", "11417", "https://www.ssb.no/en/statbank/table/11417", mi["updated"]),
                         src("Statistics Norway, wages, employment and productivity by industry", "09174", "https://www.ssb.no/en/statbank/table/09174", mh["updated"]),
                         src("Eurostat, labour cost levels by NACE Rev. 2 activity", "lc_lci_lev", "https://ec.europa.eu/eurostat/databrowser/view/lc_lci_lev/default/table", eu,
-                            "Labour cost surveys every fourth year (2008, 2012, 2016) and annual estimates from 2020; converted to euro at annual average exchange rates, so the krone's movements show up in Norway's level.")]}
+                            "Labour cost surveys every fourth year (2008, 2012, 2016) and annual estimates from 2020. Converted to euro at annual average exchange rates, so the krone's movements show up in Norway's level.")]}
+
+
+# The eleven manufacturing sectors at the A38 level, as in Holm and Jasinski, «Lønnsandelen i industrien»
+MFG_A38 = ["A38NP2X10_12", "A38NP2X13_15", "A38NP2X16_18", "A38NP2X19_21", "A38NP2X22_23", "A38NP2X24_25",
+           "A38NP2X26", "A38NP2X27", "A38NP2X28", "A38NP2X29_30", "A38NP2X31_33"]
+
+
+def _first_eigenvector(C: list[list[float]]) -> tuple[list[float], float]:
+    """Dominant eigenvector and eigenvalue of a symmetric positive semi-definite matrix (power iteration, standard library only)."""
+    n = len(C)
+    v = [1.0 + 0.01 * i for i in range(n)]
+    norm = math.sqrt(sum(x * x for x in v))
+    v = [x / norm for x in v]
+    for _ in range(20000):
+        w = [sum(C[i][j] * v[j] for j in range(n)) for i in range(n)]
+        norm = math.sqrt(sum(x * x for x in w))
+        w = [x / norm for x in w]
+        diff = max(abs(a - b) for a, b in zip(w, v))
+        v = w
+        if diff < 1e-14:
+            break
+    lam = sum(v[i] * sum(C[i][j] * v[j] for j in range(n)) for i in range(n))
+    return v, lam
+
+
+def pc1_expanding(years: list[int], S: list[list[float]], GP: list[list[float]], minobs: int = 25, lag: int = 5) -> tuple[list, float | None]:
+    """Real-time common component (first principal component) of sectoral labour shares; a port of pc1_expanding.m from the
+    replication package of Holm and Jasinski. For each year t everything is estimated on data up to t-lag: sector means and standard
+    deviations, the PC1 loadings, and the weights (average share of total gross product). The loadings are applied to year t's
+    standardised shares and the component is expressed in per cent. Returns (component per year, variance explained in the last window)."""
+    T, N = len(years), len(S[0])
+    gp_share = [[g / sum(row) for g in row] for row in GP]
+    out, explained = [None] * T, None
+    for t in range(T):
+        idx = [i for i in range(T) if years[i] <= years[t] - lag]
+        n = len(idx)
+        if n < minobs:
+            continue
+        Sw = [S[i] for i in idx]
+        w = [sum(gp_share[i][j] for i in idx) / n for j in range(N)]
+        mu = [sum(r[j] for r in Sw) / n for j in range(N)]
+        sd = [math.sqrt(sum((r[j] - mu[j]) ** 2 for r in Sw) / (n - 1)) for j in range(N)]
+        Z = [[(r[j] - mu[j]) / sd[j] for j in range(N)] for r in Sw]          # standardised, so already centred
+        C = [[sum(z[a] * z[b] for z in Z) for b in range(N)] for a in range(N)]
+        lam, top = _first_eigenvector(C)
+        fw = [sum(z[j] * lam[j] for j in range(N)) for z in Z]                # the component in the window
+        agg = [sum(r[j] * w[j] for j in range(N)) for r in Sw]                # the weighted aggregate in the window
+        mf, ma = sum(fw) / n, sum(agg) / n
+        if sum((a - mf) * (b - ma) for a, b in zip(fw, agg)) < 0:             # orient towards the aggregate
+            lam = [-x for x in lam]
+        zt = [(S[t][j] - mu[j]) / sd[j] for j in range(N)]
+        ft = sum(zt[j] * lam[j] for j in range(N))
+        out[t] = sum(w[j] * (mu[j] + sd[j] * lam[j] * ft) for j in range(N))
+        explained = 100 * top / sum(C[j][j] for j in range(N))
+    return out, explained
+
+
+def mfg_common_component() -> dict:
+    """Aggregate (M0) and common-component labour shares for manufacturing, gross and net, as in figure 5 of the paper."""
+    per, s, meta = ssb_series(ssb_data("09170", [("NACE", MFG_A38), ("ContentsCode", ["LOKO", "DEP", "DRI"]), ("Tid", ["from(1970)"])]))
+    rows = []
+    for i, y in enumerate(per):
+        W, D, O = ([s[(c, k)][i] for c in MFG_A38] for k in ("LOKO", "DEP", "DRI"))
+        if None not in W and None not in D and None not in O:
+            rows.append((int(y), W, D, O))
+    years = [r[0] for r in rows]
+    GP = [[w + d + o for w, d, o in zip(W, D, O)] for _, W, D, O in rows]
+    Sg = [[100 * w / g for w, g in zip(W, G)] for (_, W, _, _), G in zip(rows, GP)]
+    Sn = [[min(max(100 * w / (w + o), 0), 130) if (w + o) != 0 else 130 for w, o in zip(W, O)] for _, W, _, O in rows]   # clip extreme values
+    tot_g = [100 * sum(W) / sum(G) for (_, W, _, _), G in zip(rows, GP)]
+    tot_n = [100 * sum(W) / (sum(W) + sum(O)) for _, W, _, O in rows]
+    out = {"years": [str(y) for y in years], "updated": meta["updated"]}
+    for name, S_, tot in (("gross", Sg, tot_g), ("net", Sn, tot_n)):
+        com, expl = pc1_expanding(years, S_, GP)
+        ok = [i for i, c in enumerate(com) if c is not None]
+        shift = sum(tot[i] for i in ok) / len(ok) - sum(com[i] for i in ok) / len(ok)   # re-centre on the aggregate's mean over the same years
+        out[name] = [None if c is None else round(c + shift, 1) for c in com]
+        out[name + "_total"] = [round(x, 1) for x in tot]
+        out[name + "_explained"] = expl
+    return out
 
 
 def ind_labour_shares() -> dict:
     _, _, mn = na_income()
     shares = [(k, lab, labour_shares(code)) for code, (k, lab) in NA_INDUSTRIES.items()]
     shares.insert(2, ("business", "Mainland Norway excl. general government", labour_shares("nr23_6fn", minus=NA_GOVERNMENT)))
+    cc = mfg_common_component()
+    cc_note = ("First principal component of the labour shares of the eleven A38 manufacturing sectors, computed in real time as in Holm and Jasinski: "
+               "for each year, sector means, standard deviations, loadings and value-added weights are estimated on data up to five years earlier "
+               "(at least 25 years, so the series starts in 1999). The level is re-centred on the mean of the aggregate manufacturing share.")
     series = {}
     for k, lab, (years, gross, net) in shares:
         series[f"gross_{k}"] = S(f"Gross labour share, {lab}", "per cent", "A", years, gross, 1, derived=True)
+    series["gross_pc"] = S("Gross labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], cc["gross"], 1, derived=True, note=cc_note)
     for k, lab, (years, gross, net) in shares:
         series[f"net_{k}"] = S(f"Net labour share, {lab}", "per cent", "A", years, net, 1, derived=True)
+    series["net_pc"] = S("Net labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], cc["net"], 1, derived=True, note=cc_note)
     return {"series": series,
             "method": ("Labour shares are computed from the national accounts in current prices. Gross labour share = compensation of employees / "
-                       "(compensation of employees + consumption of fixed capital + net operating surplus); net labour share = compensation of employees / "
+                       "(compensation of employees + consumption of fixed capital + net operating surplus). Net labour share = compensation of employees / "
                        "(compensation of employees + net operating surplus). Taxes and subsidies on production are excluded from the denominator, and income of the "
                        "self-employed is part of the operating surplus. For general government the operating surplus is essentially zero, so the mainland and "
-                       "total-economy shares are pulled up by the public sector; the series excluding general government (Mainland Norway minus general government, "
-                       "own aggregation) avoids this. The definitions follow Holm and Jasinski, «Lønnsandelen i industrien», Samfunnsøkonomen."),
+                       "total-economy shares are pulled up by the public sector. The series excluding general government (Mainland Norway minus general government, "
+                       "own aggregation) avoids this. The definitions follow Holm and Jasinski, «Lønnsandelen i industrien», Samfunnsøkonomen. "
+                       "The common component for manufacturing is the first principal component of the sectoral labour shares from the same paper, "
+                       f"computed in real time. In the latest estimation window it explains {cc['gross_explained']:.1f} per cent of the variance of the gross shares "
+                       f"and {cc['net_explained']:.1f} per cent of the net shares."),
             "sources": [src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", mn["updated"])]}
 
 
@@ -812,7 +922,7 @@ def ind_productivity() -> dict:
             "method": ("TFP is computed by growth accounting (Törnqvist index) from a Cobb-Douglas production function. Annual TFP growth is "
                        "Δlog A = Δlog Y − (1 − s̄) Δlog K − s̄ Δlog L, where s̄ is the average of the labour share in the two adjacent years, and the TFP index is the "
                        "cumulated growth rates rebased to 2000 = 100. The labour share is compensation of employees divided by compensation of employees plus "
-                       "consumption of fixed capital plus net operating surplus for Mainland Norway (SSB 09170, current prices); it is shown as a separate series. "
+                       "consumption of fixed capital plus net operating surplus for Mainland Norway (SSB 09170, current prices). It is shown as a separate series. "
                        f"Its mean over the sample is {sum(SH[y] for y in years) / len(years) * 100:.1f} per cent. "
                        "Y is gross value added in Mainland Norway at constant 2023 prices (SSB 09189), L is total hours worked in Mainland Norway (SSB 09174), "
                        "K is the net stock of fixed capital in Mainland Norway at constant 2023 prices (SSB 09181). Labour productivity is Y/L. "

@@ -106,6 +106,10 @@ A tile can be linked directly: `dashboard.html#inflation` opens it, and
 `dashboard.html#oil_fund=costs` opens it with the named series switched on.
 
 To preview, serve over http (`python -m http.server 8000`); the page loads the JSON with fetch().
+
+The deploy workflow also adds `?v=<commit id>` to the stylesheet and script links in every page, so
+browsers fetch the new `.css` and `.js` after each push instead of showing a cached copy. If a page
+still looks old right after a push, wait a few minutes (GitHub caches pages for ten) and reload.
 To add an indicator: write an `ind_*` function in the build script and a matching entry in `DEFS` in
 `dashboard.js`. Table ids and variable codes must be verified against the API metadata, not guessed.
 
