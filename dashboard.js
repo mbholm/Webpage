@@ -198,8 +198,8 @@
       defaultYears: 30, showMethod: true,
     },
     {
-      id: 'wages', title: 'Wages', kicker: 'Labor costs', goodUp: null,
-      desc: 'Annual earnings growth for all employees, and labor costs per hour worked: in kroner from the national accounts, and in euro compared with other European countries from Eurostat. Eurostat’s figures are converted at annual average exchange rates, so Norway’s level moves with the krone.',
+      id: 'wages', title: 'Wages', kicker: 'Earnings', goodUp: null,
+      desc: 'Annual earnings for all employees, per full-time equivalent, from Statistics Norway: nominal growth, real growth (deflated by the consumer price index) and the level in kroner, with growth by industry from 2017.',
       headline: { series: 'wage_growth', fmt: (v) => fmt.pct(v), sub: 'annual earnings growth' },
       secondary: [{ series: 'real_wage_growth', label: 'real', fmt: fmt.signedPct }],
       spark: 'wage_growth', sparkZero: true,
@@ -207,13 +207,7 @@
               { s: 'wage_level', short: 'Level, NOK', kind: 'line', group: 'Annual earnings' },
               ...[['AS', 'All industries'], ['C', 'Manufacturing'], ['F', 'Construction'], ['G', 'Trade'], ['H', 'Transport'], ['J', 'Information and communication'], ['K', 'Finance'],
                   ['M', 'Professional services'], ['O', 'Public administration'], ['P', 'Education'], ['Q', 'Health and social work']]
-                .map(([k, t]) => ({ s: 'wg_' + k, short: t, kind: 'line', group: 'Earnings growth by industry (2017–)' })),
-              { s: 'lc_hour_mainland', short: 'Mainland Norway', kind: 'line', group: 'Labor cost per hour, NOK' }, { s: 'lc_hour_mfg', short: 'Manufacturing', kind: 'line', group: 'Labor cost per hour, NOK' },
-              { s: 'lc_hour_mainland_growth', short: 'Mainland, growth', kind: 'line', group: 'Labor cost per hour, NOK' }, { s: 'lc_hour_mfg_growth', short: 'Manufacturing, growth', kind: 'line', group: 'Labor cost per hour, NOK' },
-              ...[['no', 'Norway'], ['se', 'Sweden'], ['dk', 'Denmark'], ['fi', 'Finland'], ['de', 'Germany'], ['nl', 'Netherlands'], ['fr', 'France'], ['is', 'Iceland'], ['ea20', 'Euro area'], ['eu27_2020', 'EU']]
-                .map(([k, t]) => ({ s: 'lc_eur_' + k, short: t, kind: 'line', group: 'Labor cost per hour, EUR (Eurostat)' })),
-              ...[['no', 'Norway'], ['se', 'Sweden'], ['dk', 'Denmark'], ['de', 'Germany'], ['eu27_2020', 'EU']]
-                .map(([k, t]) => ({ s: 'lc_mfg_eur_' + k, short: t, kind: 'line', group: 'Manufacturing, EUR per hour (Eurostat)' }))],
+                .map(([k, t]) => ({ s: 'wg_' + k, short: t, kind: 'line', group: 'Earnings growth by industry (2017–)' }))],
       defaultYears: 30,
     },
     {
@@ -288,7 +282,7 @@
   ];
 
   // ------------------------------------------------------------------ comparisons with other countries
-  // Two blocks with the same six tiles: Norway against the Nordic countries and against European countries.
+  // Two blocks with the same seven tiles: Norway against the Nordic countries, and against Europe and the US.
   // A country keeps one color (slot) across the tiles of a block. A dashed line is a second measure for the same country.
   const BLOCKS = {
     nordic: {
@@ -297,7 +291,7 @@
       policy: [['no', 'Norway', 0], ['se', 'Sweden', 1], ['dk', 'Denmark', 2], ['fi', 'Finland (euro area)', 3], ['is', 'Iceland', 4]],
       yields: [['no', 'Norway', 0], ['se', 'Sweden', 1], ['dk', 'Denmark', 2], ['fi', 'Finland', 3], ['is', 'Iceland', 4]],
       ratesNote: 'Finland is in the euro area and has the European Central Bank’s rate. The OECD’s yield series for Iceland ends in 2022.',
-      inflationNote: '', employmentNote: '',
+      inflationNote: '', employmentNote: '', wageNote: ' Real wages for Iceland start in 2017, when its harmonized price index starts.',
       tfpNote: 'TFP needs a capital stock, which ends earlier than the other series for some countries and is missing for Iceland.',
     },
     europe: {
@@ -308,6 +302,7 @@
       ratesNote: 'Germany, France and Italy share the euro area’s policy rate, so they appear only among the bond yields. The United Kingdom and Switzerland appear only in this tile.',
       inflationNote: ' The United States has no current harmonized index, so its figures are the national consumer price index, which includes owner-occupied housing costs. Its core measure excludes food and energy.',
       employmentNote: ' The United States figure comes from the OECD, covers ages 16 to 64 and has no series for ages 20 to 64.',
+      wageNote: ' For the United States, wages are measured per full-time equivalent employee and deflated by the national consumer price index.',
       tfpNote: 'TFP needs a capital stock, which ends earlier than the other series for some countries. For the United States, output is real GDP and the capital stock comes from the Bureau of Economic Analysis.',
     },
   };
@@ -356,6 +351,14 @@
         compare: { rows: rows(C, 'rate1564'), fmt: (v) => fmt.pct(v), sub: 'employment rate, ages 15–64' },
         views: [...views(C, 'rate1564', 'Ages 15–64', { on: true }), ...views(C, 'rate2064', 'Ages 20–64', { dash: true, tip: 'ages 20–64' })],
         defaultYears: 20,
+      }),
+      mk('wages', {
+        title: 'Wages',
+        desc: 'Annual wage growth, measured as wages and salaries per hour worked by employees in each country’s national accounts. Dashed lines show real wage growth, i.e. wage growth deflated by the harmonized index of consumer prices. Norway is computed in the same way as the other countries, so the figures differ from annual earnings in the wage tile at the top of the page.' + B.wageNote,
+        compare: { rows: rows(C, 'nominal'), fmt: (v) => fmt.pct(v), sub: 'annual wage growth' }, sparkZero: true,
+        views: [...views(C, 'nominal', 'Nominal wage growth', { on: true, tip: 'nominal' }), ...views(C, 'real', 'Real wage growth', { dash: true, tip: 'real' })],
+        defaultYears: 30, showMethod: true,
+        averages: { title: 'Average annual wage growth by country', measures: [{ prefix: 'real', label: 'Real wages', noun: 'Real wage' }, { prefix: 'nominal', label: 'Nominal wages', noun: 'Nominal wage' }], countries: C, years: 10 },
       }),
       mk('productivity', {
         title: 'Productivity',
@@ -587,7 +590,7 @@
     const sources = (ind.sources || []).map((s) => `<li>${s.url ? `<a href="${s.url}">${s.name}</a>` : s.name}${s.table ? ` (${/^\d/.test(s.table) ? 'table ' : 'dataflow '}${s.table})` : ''}${s.updated ? `, updated ${s.updated}` : ''}${s.note ? `. ${s.note}` : ''}</li>`).join('');
     const derivedAll = Object.values(ind.series).filter((s) => s.derived);
     // A tile where every series is an own calculation says so in one line instead of listing them all
-    const derived = derivedAll.length > 12 && derivedAll.length === Object.keys(ind.series).length
+    const derived = derivedAll.length > 8 && derivedAll.length === Object.keys(ind.series).length
       ? '<li>Every series in this tile is my own calculation from the sources below.</li>'
       : derivedAll.map((s) => `<li>${s.label}${s.note ? ': ' + s.note : ''}</li>`).join('');
     return `
@@ -807,7 +810,7 @@
   }
   function drawAverages() {
     const A = state.def.averages, a = state.avg, [lo, hi] = avgYearSpan();
-    const what = A.measures.find((m) => m.prefix === a.measure).label;
+    const measure = A.measures.find((m) => m.prefix === a.measure), what = measure.noun || measure.label;
     const years = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
     ['from', 'to'].forEach((k) => { document.getElementById('d-avg-' + k).innerHTML = years.map((y) => `<option value="${y}"${y === a[k] ? ' selected' : ''}>${y}</option>`).join(''); });
     inner.querySelectorAll('[data-avg-measure]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.avgMeasure === a.measure)));

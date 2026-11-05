@@ -63,7 +63,7 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 A one-page dashboard of Norwegian macro indicators (GDP, consumption, investment, inflation, unemployment, employment, labor market tightness, interest
 rates, the krone, trade balance, current account, the oil fund, the government budget, house prices, credit, inequality,
 productivity, wages and labor shares), followed by two blocks that compare Norway with the Nordic countries and with Europe
-and the US (GDP, inflation, interest rates, unemployment, employment and productivity in each). Three files:
+and the US (GDP, inflation, interest rates, unemployment, employment, wages and productivity in each). Three files:
 
 - `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
   (SDMX API), Eurostat (JSON API), the BIS and the OECD (SDMX APIs), NAV, NBIM and the Ministry of Finance, computes the derived series (TFP, labor productivity,
@@ -122,7 +122,7 @@ Sources without an API are read from the publisher's web page, so they break if 
 
 The comparison blocks (`CMP_*` and `cmp_*` in the build script, `BLOCKS` and `compareDefs` in `dashboard.js`):
 
-- The countries are set in `CMP_BLOCKS` (data) and `BLOCKS` (display). The same six tiles are generated for each block.
+- The countries are set in `CMP_BLOCKS` (data) and `BLOCKS` (display). The same seven tiles are generated for each block.
   A country keeps one color across a block, and a dashed line is a second measure for the same country.
 - GDP, inflation (HICP), unemployment and employment (harmonized labor force surveys) come from Eurostat, one
   call per dataset for all countries. Policy rates come from the BIS and ten-year bond yields from the OECD.
@@ -141,7 +141,11 @@ The comparison blocks (`CMP_*` and `cmp_*` in the build script, `BLOCKS` and `co
   Analysis' flat file (`FixedAssets.txt`, about 16 MB, read as a stream). United States inflation is the national
   CPI, not a harmonized index. If one of these sources fails, the United States series from the previous run
   are kept and the reason is written under `us_kept` in that indicator.
-- The productivity tiles have a bar chart of average annual growth per country (`averages` in the tile's
+- Wages: growth in wages and salaries per hour worked by employees (`nama_10_a10` item D11 over `nama_10_a10_e`
+  item SAL_DC), and the same deflated by the annual average HICP (`prc_hicp_ainr`). For the United States it is
+  the Bureau of Economic Analysis' wages and salaries per full-time equivalent employee (FRED series
+  `A4401C0A052NBEA`), deflated by the national CPI.
+- The productivity and wage tiles have a bar chart of average annual growth per country (`averages` in the tile's
   definition, `drawAverages` in `dashboard.js`). The reader picks the measure and the first and last year. The
   average is a compound rate computed in the browser from the annual growth series.
 - Eurostat's unit codes carry the reference year (`CLV_I20`, `CLV20_MNAC`). When Eurostat moves to a new

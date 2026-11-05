@@ -771,14 +771,8 @@ def eurostat(dataset: str, **params) -> tuple[list[str], dict[tuple, list], str]
     return times, out, (d.get("updated") or "")[:10]
 
 
-EUROSTAT_GEOS = {"NO": "Norway", "SE": "Sweden", "DK": "Denmark", "FI": "Finland", "DE": "Germany", "NL": "Netherlands", "FR": "France",
-                 "IS": "Iceland", "EA20": "Euro area", "EU27_2020": "EU"}
-
-
 def ind_wages() -> dict:
     pa, sa, ma = ssb_series(ssb_data("14858", [("ContentsCode", ["Arslonn", "ArslonnEndring", "ReallonnEndring"]), ("Tid", ["from(1970)"])]))
-    ph, sh, mh = ssb_series(ssb_data("09174", [("NACE", ["nr23_6fn", "nr23ind"]), ("ContentsCode", ["LKostnader", "TimeverkL", "LKostTimeverkProsent"]), ("Tid", ["from(1970)"])]))
-    et, es, eu = eurostat("lc_lci_lev", unit="EUR", lcstruct="D1_D4_MD5", nace_r2=["B-S_X_O", "C"], geo=list(EUROSTAT_GEOS), sinceTimePeriod="2008")
     ind_codes = {"A-S": "All industries", "C": "Manufacturing", "F": "Construction", "G": "Wholesale and retail trade", "H": "Transportation and storage",
                  "J": "Information and communication", "K": "Financial and insurance activities", "M": "Professional, scientific and technical activities",
                  "O": "Public administration and defense", "P": "Education", "Q": "Human health and social work activities"}
@@ -790,23 +784,9 @@ def ind_wages() -> dict:
     }
     for code, lab in ind_codes.items():
         series["wg_" + code.replace("-", "")] = S(f"Annual earnings growth, {lab}", "percent", "A", pi, si[(code, "ArslonnEndring")], 1)
-    # Hourly labor costs: compensation of employees per hour worked by employees (national accounts), NOK
-    for code, lab, k in (("nr23_6fn", "Mainland Norway", "mainland"), ("nr23ind", "Manufacturing", "mfg")):
-        W, H = sh[(code, "LKostnader")], sh[(code, "TimeverkL")]
-        series[f"lc_hour_{k}"] = S(f"Labor cost per hour worked, {lab}", "NOK", "A", ph, [None if (w is None or not h) else round(w / h, 0) for w, h in zip(W, H)], 0, derived=True,
-                                   note="Compensation of employees divided by hours worked by employees, national accounts (SSB 09174).")
-        series[f"lc_hour_{k}_growth"] = S(f"Labor cost per hour worked, {lab}, growth", "percent", "A", ph, sh[(code, "LKostTimeverkProsent")], 1)
-    # Eurostat labor cost levels, EUR per hour (the survey years 2008, 2012, 2016 and annual estimates from 2020)
-    for geo, lab in EUROSTAT_GEOS.items():
-        series[f"lc_eur_{geo.lower()}"] = S(f"Hourly labor cost, {lab}, whole economy excl. public administration", "EUR per hour", "A", et, es[("A", "EUR", "D1_D4_MD5", "B-S_X_O", geo)], 1)
-    for geo in ("NO", "SE", "DK", "DE", "EU27_2020"):
-        series[f"lc_mfg_eur_{geo.lower()}"] = S(f"Hourly labor cost, {EUROSTAT_GEOS[geo]}, manufacturing", "EUR per hour", "A", et, es[("A", "EUR", "D1_D4_MD5", "C", geo)], 1)
     return {"series": series,
             "sources": [src("Statistics Norway, annual earnings, nominal and real", "14858", "https://www.ssb.no/en/statbank/table/14858", ma["updated"]),
-                        src("Statistics Norway, annual earnings by industry", "11417", "https://www.ssb.no/en/statbank/table/11417", mi["updated"]),
-                        src("Statistics Norway, wages, employment and productivity by industry", "09174", "https://www.ssb.no/en/statbank/table/09174", mh["updated"]),
-                        src("Eurostat, labor cost levels by NACE Rev. 2 activity", "lc_lci_lev", "https://ec.europa.eu/eurostat/databrowser/view/lc_lci_lev/default/table", eu,
-                            "Labor cost surveys every fourth year (2008, 2012, 2016) and annual estimates from 2020. Converted to euro at annual average exchange rates, so the krone's movements show up in Norway's level.")]}
+                        src("Statistics Norway, annual earnings by industry", "11417", "https://www.ssb.no/en/statbank/table/11417", mi["updated"])]}
 
 
 AVG_YEARS = 30   # the labor share chart draws each series' average over this many years (avgYears in dashboard.js)
@@ -1397,7 +1377,7 @@ def ind_budget(fund: dict | None = None) -> dict:
 
 
 # --------------------------------------------------------------------------- comparisons with other countries
-# Two blocks of six tiles each: Norway against the Nordic countries and against European countries. The figures come from
+# Two blocks of seven tiles each: Norway against the Nordic countries, and against Europe and the US. The figures come from
 # sources that publish all the countries on the same definitions: Eurostat, the BIS (policy rates) and the OECD (bond yields).
 # The exception is Mainland Norway, which only Statistics Norway publishes.
 
@@ -1425,6 +1405,10 @@ CMP_EUROSTAT = {
     "hours": ("nama_10_a10_e", dict(na_item="EMP_DC", unit="THS_HW", nace_r2="TOTAL", sinceTimePeriod="1990")),
     "capital": ("nama_10_nfa_st", dict(asset10="N11N", unit="CLV20_MNAC", nace_r2="TOTAL", sinceTimePeriod="1990")),
     "income": ("nama_10_gdp", dict(na_item=["D1", "B2A3G"], unit="CP_MNAC", sinceTimePeriod="1990")),
+    # Inputs to the wage calculation: wages and salaries, hours worked by employees, and the annual average change in the HICP
+    "wagebill": ("nama_10_a10", dict(na_item="D11", unit="CP_MNAC", nace_r2="TOTAL", sinceTimePeriod="1994")),
+    "employee_hours": ("nama_10_a10_e", dict(na_item="SAL_DC", unit="THS_HW", nace_r2="TOTAL", sinceTimePeriod="1994")),
+    "hicp_annual": ("prc_hicp_ainr", dict(coicop18="TOTAL", unit="RCH_A_AVG", sinceTimePeriod="1995")),
 }
 _CMP: dict = {}
 
@@ -1607,6 +1591,14 @@ def us_series(kind: str) -> dict:
     elif kind == "employment":
         d = fred_periods(fred(["LREM64TTUSQ156S"], "2000-01-01")["LREM64TTUSQ156S"], "Q")
         out["rate1564_us"] = S(f"Employment rate, {name}, ages 15–64", "percent of population", "Q", sorted(d), [round(d[q], 1) for q in sorted(d)], 1)
+    elif kind == "wages":
+        f = fred(["A4401C0A052NBEA"], "1997-01-01")
+        nominal = dict(zip(*change_over(fred_periods(f["A4401C0A052NBEA"], "A"), year_earlier)))
+        months: dict[str, list] = {}
+        for q, v in fred_periods(fred(["CPIAUCNS"], "1997-01-01")["CPIAUCNS"], "M").items():
+            months.setdefault(q[:4], []).append(v)
+        prices = dict(zip(*change_over({y: sum(v) / len(v) for y, v in months.items() if len(v) >= 10}, year_earlier)))
+        out.update(wage_series("us", name, nominal, prices, "wages and salaries per full-time equivalent employee", "the national consumer price index"))
     elif kind == "productivity":
         out["_ga"] = us_growth_accounting()
     else:
@@ -1816,6 +1808,49 @@ def cmp_productivity(block: str, prod: dict | None, prev: dict | None = None) ->
                                "https://data-explorer.oecd.org/vis?df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_PDB%40DF_PDB&df[ag]=OECD.SDD.TPS")] if us else [])}, kept)
 
 
+def wage_series(key: str, name: str, nominal: dict, prices: dict, measure: str, deflator: str) -> dict:
+    """Nominal and real wage growth series for one country from {year: percent} dicts. Real growth is (1 + w) / (1 + p) - 1."""
+    ys = sorted(nominal)
+    real = {y: round(((1 + nominal[y] / 100) / (1 + prices[y] / 100) - 1) * 100, 2) for y in ys if prices.get(y) is not None}
+    return {f"nominal_{key}": S(f"Wage growth, {name}: {measure}", "percent", "A", ys, [nominal[y] for y in ys], 1, derived=True),
+            f"real_{key}": S(f"Real wage growth, {name}: {measure}, deflated by {deflator}", "percent", "A", sorted(real), [real[y] for y in sorted(real)], 1, derived=True)}
+
+
+def cmp_wages(block: str, prev: dict | None = None) -> dict:
+    """Annual wage growth from the national accounts: wages and salaries per hour worked by employees, nominal and deflated by the HICP."""
+    series = {}
+    for key in CMP_BLOCKS[block]:
+        if key == "us":
+            continue
+        for code in (["EA21", "EA20"] if key == "ea" else [None]):   # one euro area composition for wages and hours
+            try:
+                W, H = dict(zip(*cmp_values("wagebill", key, geo=code))), dict(zip(*cmp_values("employee_hours", key, geo=code)))
+                break
+            except KeyError:
+                continue
+        else:
+            raise KeyError(f"no wages and employee hours for {key}")
+        nominal = dict(zip(*change_over({y: W[y] / H[y] for y in W if H.get(y)}, year_earlier)))
+        prices = dict(zip(*cmp_values("hicp_annual", key)))
+        series.update(wage_series(key, cmp_name(key), nominal, prices, "wages and salaries per hour worked by employees", "the HICP"))
+    us = "us" in CMP_BLOCKS[block]
+    kept = add_us(series, prev, "wages") if us else None
+    method = ("Every series in this tile is my own calculation. Nominal wage growth is the growth in wages and salaries per hour worked by employees, both from the "
+              "national accounts for the whole economy as published by Eurostat. Real wage growth deflates it by the annual average change in the harmonized index "
+              "of consumer prices, i.e. (1 + wage growth) / (1 + inflation) − 1. Norway is computed in the same way as the other countries, so the figures differ "
+              "from annual earnings in the wage tile at the top of the page, which Statistics Norway measures per full-time equivalent. "
+              + ("For the United States, wages are the Bureau of Economic Analysis' wages and salaries per full-time equivalent employee, since its accounts have "
+                 "no current series for hours worked by employees, and prices are the national consumer price index. " if us else "")
+              + "Real wages start later for countries where the harmonized price index starts later.")
+    return with_us({"series": series, "method": method,
+            "sources": [cmp_src("wagebill", "gross value added and income by industry, annual national accounts", "Wages and salaries, total economy, current prices."),
+                        cmp_src("employee_hours", "employment by industry, annual national accounts", "Hours worked by employees, domestic concept."),
+                        cmp_src("hicp_annual", "harmonized index of consumer prices (HICP), annual", "Annual average rate of change.")]
+                       + ([src("US Bureau of Economic Analysis, wages and salaries per full-time equivalent employee (series A4401C0A052NBEA)", url="https://fred.stlouisfed.org/series/A4401C0A052NBEA", note=FRED_NOTE),
+                           src("US Bureau of Labor Statistics, consumer price index for all urban consumers (series CPIAUCNS)", url="https://fred.stlouisfed.org/series/CPIAUCNS",
+                               note="Annual averages of the monthly index. " + FRED_NOTE)] if us else [])}, kept)
+
+
 def cmp_rates(block: str) -> dict:
     policy, yields = cmp_policy_rates(), cmp_bond_yields()
     series = {}
@@ -1905,6 +1940,7 @@ def main() -> int:
         run(f"{block}_rates", cmp_rates, block)
         run(f"{block}_unemployment", cmp_unemployment, block)
         run(f"{block}_employment", cmp_employment, block, previous.get(f"{block}_employment"))
+        run(f"{block}_wages", cmp_wages, block, previous.get(f"{block}_wages"))
         run(f"{block}_productivity", cmp_productivity, block, indicators.get("productivity"), previous.get(f"{block}_productivity"))
 
     OUT.parent.mkdir(exist_ok=True)
