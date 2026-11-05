@@ -133,6 +133,7 @@ dialog.detail::backdrop { background: rgba(10, 14, 20, .45); backdrop-filter: bl
 
 .d-second { margin-top: 1.25rem; }
 .d-second h3 { font-size: 1.05rem; margin: 0 0 .5rem; }
+.d-second .d-sub { color: var(--muted); font-size: .9rem; margin: -.15rem 0 .6rem; max-width: 46rem; }
 .d-second .d-chart { height: 300px; }
 
 .d-table-wrap { margin-top: 1rem; }

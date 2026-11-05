@@ -153,6 +153,20 @@
       defaultYears: 30,
     },
     {
+      id: 'budget', title: 'Government budget', kicker: 'Fiscal policy', goodUp: null,
+      desc: 'Fiscal policy as presented in the latest National Budget (Nasjonalbudsjettet). The structural non-oil deficit is the cyclically adjusted budget deficit excluding petroleum revenue. It measures how much oil money the budget uses and is covered by transfers from the oil fund. Under the fiscal rule this spending should over time follow the expected real return on the fund, set at 3 per cent. Below the chart are the state’s spending and income in the budget proposal.',
+      headline: { series: 'deficit_gdp', fmt: (v) => fmt.pct(v), sub: 'structural non-oil deficit, share of trend mainland GDP' },
+      secondary: [{ series: 'fund_pct', label: 'of the oil fund', fmt: fmt.pct }],
+      spark: 'deficit_gdp',
+      views: [{ s: 'deficit_gdp', short: 'Structural non-oil deficit', kind: 'line', on: true, group: 'Deficit, share of trend mainland GDP' },
+              { s: 'oil_corrected_gdp', short: 'Oil-corrected deficit', kind: 'line', group: 'Deficit, share of trend mainland GDP' },
+              { s: 'fund_pct', short: 'Fund spending, share of the fund', kind: 'line', group: 'Use of the oil fund' }, { s: 'expected_return', short: 'Expected real return', kind: 'line', group: 'Use of the oil fund' },
+              { s: 'fund_share_budget', short: 'Fund spending, share of expenditure', kind: 'line', group: 'Use of the oil fund' },
+              { s: 'impulse', short: 'Budget indicator', kind: 'bar', group: 'Other' }, { s: 'public_expenditure', short: 'Public expenditure, share of mainland GDP', kind: 'line', group: 'Other' },
+              { s: 'tax_revenue', short: 'Taxes, share of mainland GDP', kind: 'line', group: 'Other' }],
+      defaultYears: 30,
+    },
+    {
       id: 'house_prices', title: 'House prices', kicker: 'Housing', goodUp: null,
       desc: 'Price index for existing dwellings, whole country, seasonally adjusted (2015 = 100), with changes on a year earlier for the country and the largest cities.',
       headline: { series: 'yoy', fmt: (v) => fmt.signedPct(v), sub: 'change on a year earlier' },
@@ -288,14 +302,14 @@
   // ------------------------------------------------------------------ detail dialog
   const dlg = document.getElementById('detail');
   const inner = document.getElementById('d-inner');
-  let chart = null, chart2 = null, state = null;
+  let chart = null, chart2 = null, bdCharts = [], state = null;
 
   dlg.addEventListener('close', () => { destroyCharts(); if (location.hash) history.replaceState(null, '', location.pathname + location.search); });
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
   window.addEventListener('hashchange', openFromHash);
   // #id opens a tile; #id=seriesA,seriesB opens it with those series switched on
   function openFromHash() { const [id, keys] = location.hash.replace('#', '').split('='); if (id && DEFS.some((d) => d.id === id) && DATA) openDetail(id, true, keys ? keys.split(',') : null); }
-  function destroyCharts() { if (chart) { chart.destroy(); chart = null; } if (chart2) { chart2.destroy(); chart2 = null; } }
+  function destroyCharts() { if (chart) { chart.destroy(); chart = null; } if (chart2) { chart2.destroy(); chart2 = null; } bdCharts.forEach((c) => c.destroy()); bdCharts = []; }
 
   function openDetail(id, fromHash, keys) {
     const def = DEFS.find((d) => d.id === id), ind = DATA.indicators[id];
@@ -316,6 +330,7 @@
     drawChart();
     drawTable();
     if (def.second) drawSecond();
+    if (ind.breakdowns) drawBreakdowns(ind.breakdowns);
     dlg.scrollTop = 0;
   }
 
@@ -385,6 +400,7 @@
       <div class="d-legend" id="d-legend"></div>
       <div class="d-table-wrap" id="d-table" hidden></div>
       ${def.second ? `<div class="d-second"><h3>${def.second.title}</h3><div class="d-chart"><canvas id="d-canvas2" role="img" aria-label="${def.second.title}"></canvas></div></div>` : ''}
+      ${(ind.breakdowns || []).map((b, i) => `<div class="d-second"><h3>${b.title}</h3><p class="d-sub">${b.subtitle}</p><div class="d-chart" style="height:${b.items.length * (window.innerWidth < 700 ? 40 : 28) + 60}px"><canvas id="d-bd-${i}" role="img" aria-label="${b.title}"></canvas></div></div>`).join('')}
       ${def.decisions && ind.decisions ? decisionsHtml(ind.decisions) : ''}
       <div class="d-notes">
         ${def.showMethod && ind.method ? `<h4>Method</h4><p class="method">${ind.method}</p>` : ''}
@@ -535,6 +551,39 @@
       + avgs.map(({ d, mean, from, to }) =>
         `<span><span class="sw line" style="background:repeating-linear-gradient(90deg, var(${SLOTS[d.slot % 8]}) 0 4px, transparent 4px 7px)"></span>${d.label}: average ${from}–${to}, ${fmt.num(mean, d.s.decimals)}${unitShort(d.unit) ? ' ' + unitShort(d.unit) : ''}</span>`).join('');
     if (state.table) drawTable();
+  }
+
+  // Horizontal bar charts for one-year breakdowns (ind.breakdowns): items sorted by size, value written at the end of each bar
+  function drawBreakdowns(list) {
+    const ink = cssVar('--viz-ink-2'), grid = cssVar('--viz-grid'), narrow = window.innerWidth < 700;
+    const wrap = (text, n) => { const out = ['']; text.split(' ').forEach((w) => { if ((out[out.length - 1] + ' ' + w).trim().length > n) out.push(w); else out[out.length - 1] = (out[out.length - 1] + ' ' + w).trim(); }); return out; };
+    const endLabels = {
+      id: 'endLabels',
+      afterDatasetsDraw(c) {
+        const ctx = c.ctx;
+        ctx.save(); ctx.fillStyle = cssVar('--viz-ink'); ctx.font = `11px ${Chart.defaults.font.family}`; ctx.textBaseline = 'middle';
+        c.getDatasetMeta(0).data.forEach((bar, i) => ctx.fillText(fmt.num(c.data.datasets[0].data[i], 1), bar.x + 6, bar.y));
+        ctx.restore();
+      },
+    };
+    list.forEach((b, i) => {
+      const el = document.getElementById('d-bd-' + i);
+      if (!el) return;
+      const max = Math.max(...b.items.map((x) => x.value));
+      bdCharts.push(new Chart(el.getContext('2d'), {
+        type: 'bar',
+        data: { labels: b.items.map((x) => (narrow ? wrap(x.label, 24) : x.label)), datasets: [{ label: b.unit, data: b.items.map((x) => x.value), backgroundColor: cssVar('--s1'), borderRadius: 3, borderSkipped: 'start', barPercentage: 0.72 }] },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { display: false },
+                     tooltip: { callbacks: { title: (items) => b.items[items[0].dataIndex].label,
+                                             label: (it) => { const x = b.items[it.dataIndex]; return ` NOK ${fmt.num(x.value, 1)} bn, ${fmt.num((100 * x.value) / b.total, 1)} % of the total${x.group ? ' (' + x.group + ')' : ''}`; } } } },
+          scales: { x: { suggestedMax: max * 1.14, grid: { color: grid }, ticks: { color: ink }, border: { display: false }, title: { display: true, text: b.unit, color: ink, font: { size: 11 } } },
+                    y: { grid: { display: false }, ticks: { color: ink, font: { size: 11 } }, border: { color: cssVar('--viz-axis') } } },
+        },
+        plugins: [endLabels],
+      }));
+    });
   }
 
   function drawSecond() {

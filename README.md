@@ -61,11 +61,11 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 ### The Norway dashboard (dashboard.html)
 
 A one-page dashboard of Norwegian macro indicators (GDP, inflation, unemployment, employment, interest
-rates, the krone, trade balance, current account, the oil fund, house prices, productivity, wages and
-labour shares). Three files:
+rates, the krone, trade balance, current account, the oil fund, the government budget, house prices,
+productivity, wages and labour shares). Three files:
 
 - `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
-  (SDMX API), Eurostat (JSON API), NAV and NBIM, computes the derived series (TFP, labour productivity,
+  (SDMX API), Eurostat (JSON API), NAV, NBIM and the Ministry of Finance, computes the derived series (TFP, labour productivity,
   labour shares, ratios to GDP, growth rates) and writes `data/dashboard.json`. Each indicator is fetched
   independently; if one source fails, that indicator keeps the previous data and the error is recorded
   in the JSON.
@@ -91,6 +91,12 @@ Sources without an API are read from the publisher's web page, so they break if 
   Policy Report, found from the report index page. Quarterly values are plotted at the middle month of
   each quarter and drawn dashed. If the fetch fails, the previous projections are kept.
 - **Oil fund value**: the chart data on NBIM's "The fund's value" page.
+- **Government budget**: regjeringen.no. The script opens the budget hub page for the newest year
+  (`/no/statsbudsjett/<year>/`), then reads the Excel files behind the figures in Nasjonalbudsjettet
+  and the revenue and expenditure table of the state budget. Figures are found by their titles, not
+  their numbers, because the numbering changes every year. The tile switches to the new budget by
+  itself when it is published in October. The English names of the budget items are in
+  `BUDGET_LABELS`. A new item without a translation is shown in Norwegian.
 - **Oil fund management costs**: NBIM publishes no data series in kroner. The numbers are a hand-kept
   table at the top of `ind_oil_fund` in the build script (`NBIM_COSTS_REPORTED`), transcribed from the
   annual reports ("Total management costs in Norges Bank were X billion kroner"). **Add one line each
@@ -100,7 +106,8 @@ Sources without an API are read from the publisher's web page, so they break if 
 Method notes: TFP is computed in growth form (Törnqvist), weighting hours and capital by the labour
 share from the national accounts (table 09170), then cumulated into an index. Labour shares follow the
 definitions in «Lønnsandelen i industrien»: gross = W/(W + capital consumption + operating surplus),
-net = W/(W + operating surplus).
+net = W/(W + operating surplus). The common component for manufacturing is a port of
+`pc1_expanding.m` from the paper's replication package and reproduces its published key numbers.
 
 A tile can be linked directly: `dashboard.html#inflation` opens it, and
 `dashboard.html#oil_fund=costs` opens it with the named series switched on.

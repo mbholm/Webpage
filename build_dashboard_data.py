@@ -851,6 +851,8 @@ def ind_labour_shares() -> dict:
     series = {}
     for k, lab, (years, gross, net) in shares:
         series[f"gross_{k}"] = S(f"Gross labour share, {lab}", "per cent", "A", years, gross, 1, derived=True)
+    first = next(i for i, v in enumerate(cc["gross"]) if v is not None)      # the real-time component starts when the window is long enough
+    cc = {k: (v[first:] if isinstance(v, list) else v) for k, v in cc.items()}
     series["gross_pc"] = S("Gross labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], cc["gross"], 1, derived=True, note=cc_note)
     for k, lab, (years, gross, net) in shares:
         series[f"net_{k}"] = S(f"Net labour share, {lab}", "per cent", "A", years, net, 1, derived=True)
@@ -932,6 +934,188 @@ def ind_productivity() -> dict:
                         src("Statistics Norway, fixed capital by industry", "09181", "https://www.ssb.no/en/statbank/table/09181", mk["updated"]),
                         src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", mn["updated"])]}
 
+# --------------------------------------------------------------------------- government budget (Nasjonalbudsjettet, regjeringen.no)
+
+BUDGET_LABELS = {   # table labels on regjeringen.no -> English
+    "Arbeidsgiveravgift og trygdeavgift": "Employers' and employees' social security contributions",
+    "Skatt på formue og inntekt": "Tax on income and wealth",
+    "Merverdiavgift": "Value added tax",
+    "Avgifter på tobakk og alkohol": "Excise duties on tobacco and alcohol",
+    "Avgifter på motorvogner": "Motor vehicle taxes",
+    "Elektrisitetsavgift": "Electricity tax",
+    "Tollinntekter": "Customs duties",
+    "Andre avgifter": "Other excise duties",
+    "Renter og aksjeutbytte mv.": "Interest and dividends",
+    "Inntekter fra statens forvaltningsbedrifter": "Government business operations",
+    "Andre inntekter": "Other income",
+    "Alderspensjon": "Old-age pensions",
+    "Uføretrygd": "Disability benefit",
+    "Sykepenger": "Sickness benefit",
+    "Arbeidsavklaringspenger": "Work assessment allowance",
+    "Øvrige sosiale formål": "Other social benefits",
+    "Helsetjenester": "Health services under National Insurance",
+    "Foreldrepenger mv.": "Parental benefit",
+    "Arbeidsliv": "Unemployment and labour market benefits",
+    "Rammetilskudd til kommuner og fylkeskommuner": "Block grants to municipalities and counties",
+    "Regionale helseforetak": "Hospitals (regional health authorities)",
+    "Forsvar": "Defence",
+    "Samferdsel": "Transport",
+    "Høyere utdanning, forskning og fagskoler": "Higher education and research",
+    "Bistand": "Development aid",
+    "Politi og påtalemyndighet": "Police and prosecution",
+    "Jordbruksavtalen": "Agricultural agreement",
+    "Barnetrygd og kontantstøtte": "Child benefit and cash-for-care benefit",
+    "Renter på statsgjeld": "Interest on government debt",
+    "Andre utgifter": "Other expenditure",
+    "Sum skatter og avgifter fra Fastlands-Norge": "Taxes from Mainland Norway",
+    "Sum folketrygden": "National Insurance",
+}
+
+
+def _html_tables(page: str) -> list[list[list[str]]]:
+    import html as _html
+    out = []
+    for t in re.findall(r"<table.*?</table>", page, re.S):
+        rows = []
+        for r in re.findall(r"<tr.*?</tr>", t, re.S):
+            rows.append([re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", "", c))).strip() for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", r, re.S)])
+        out.append(rows)
+    return out
+
+
+def _no_number(text: str) -> float | None:
+    t = text.replace(" ", "").replace(" ", "").replace("−", "-").replace("–", "-").replace(",", ".")
+    try:
+        return float(t)
+    except ValueError:
+        return None
+
+
+def budget_breakdowns(page_html: str, year: int) -> tuple[list[dict], dict]:
+    """Revenue and expenditure of the state budget proposal (excluding petroleum), from the table on regjeringen.no.
+    The table has three amount columns: items, subtotals and section totals."""
+    table = next((t for t in _html_tables(page_html) if any(r and r[0].startswith("Statsbudsjettets inntekter") for r in t)), None)
+    if table is None:
+        raise RuntimeError("budget page: no revenue and expenditure table")
+    rows = [(re.sub(r"\d+$", "", r[0]).strip(), [_no_number(c) for c in r[1:4]]) for r in table if len(r) >= 4]
+    sections, cur, group = {}, None, None
+    for i, (label, (a, b, c)) in enumerate(rows):
+        if c is not None:                                   # section total
+            cur, group = label, None
+            sections[cur] = {"total": c, "items": []}
+        elif cur is None:
+            continue
+        elif a is not None:                                 # item inside a subtotal
+            sections[cur]["items"].append({"label": BUDGET_LABELS.get(label, label), "value": a, "group": group})
+        elif b is not None:
+            nxt = rows[i + 1][1] if i + 1 < len(rows) else (None, None, None)
+            if nxt[0] is not None:                          # a subtotal: its items follow
+                group = BUDGET_LABELS.get(label, label)
+            else:
+                group = None
+                sections[cur]["items"].append({"label": BUDGET_LABELS.get(label, label), "value": b, "group": None})
+    rev = next((v for k, v in sections.items() if k.startswith("Statsbudsjettets inntekter")), None)
+    exp = next((v for k, v in sections.items() if k.startswith("Statsbudsjettets utgifter")), None)
+    bal = next((v["total"] for k, v in sections.items() if k.startswith("Oljekorrigert")), None)
+    for name, sec in (("revenue", rev), ("expenditure", exp)):
+        if not sec or not sec["items"] or abs(sum(x["value"] for x in sec["items"]) - sec["total"]) > 2:
+            raise RuntimeError(f"budget page: {name} items do not add up to the total")
+    out = [
+        {"key": "spending", "title": f"What the state spends on, {year}", "unit": "NOK billion", "total": exp["total"],
+         "subtitle": f"State budget proposal for {year}, expenditure excluding petroleum activities: NOK {exp['total']:,.1f} billion.",
+         "items": sorted(exp["items"], key=lambda x: -x["value"])},
+        {"key": "revenue", "title": f"Where the income comes from, {year}", "unit": "NOK billion", "total": rev["total"],
+         "subtitle": (f"State budget proposal for {year}, revenue excluding petroleum activities: NOK {rev['total']:,.1f} billion. "
+                      + (f"The gap to expenditure, NOK {abs(bal):,.1f} billion, is the oil-corrected deficit, covered by a transfer from the oil fund." if bal is not None else "")),
+         "items": sorted(rev["items"], key=lambda x: -x["value"])},
+    ]
+    return out, {"expenditure": exp["total"], "revenue": rev["total"], "oil_corrected_balance": bal}
+
+
+def ind_budget() -> dict:
+    """Fiscal policy from the latest Nasjonalbudsjett: the published data behind the figures (Excel) and the state budget's
+    revenue and expenditure table. No API: the pages are found from the budget's hub page for the newest year available."""
+    base = "https://www.regjeringen.no"
+    ua = {"User-Agent": "Mozilla/5.0"}
+    this_year = datetime.now(timezone.utc).year
+    hub = year = None
+    for y in (this_year + 1, this_year, this_year - 1):
+        try:
+            hub = http_get(f"{base}/no/statsbudsjett/{y}/", headers=ua).decode("utf-8", "ignore")
+        except Exception:
+            continue
+        if "tallene-bak-figurene" in hub:
+            year = y
+            break
+    if year is None:
+        raise RuntimeError("no budget hub page with data links found on regjeringen.no")
+
+    def link(pattern):
+        m = re.search(r'href="(/no/statsbudsjett/%d/%s[^"]*)"' % (year, pattern), hub)
+        if not m:
+            raise RuntimeError(f"budget {year}: no link matching {pattern}")
+        return base + m.group(1)
+
+    fig_url, bud_url = link("nasjonalbudsjettet-%d-tallene-bak-figurene" % year), link("statsbudsjettet-%d-statens-inntekter-og-utgifter" % year)
+    breakdowns, totals = budget_breakdowns(http_get(bud_url, headers=ua).decode("utf-8", "ignore"), year)
+
+    # Index every figure in the workbooks by its title, because figure numbers change from year to year
+    figs = []
+    for href in sorted(set(re.findall(r'href="(/contentassets/[^"]*\.xlsx)"', http_get(fig_url, headers=ua).decode("utf-8", "ignore")))):
+        wb = xlsx_sheets(http_get(base + href, headers=ua))
+        index = next((rows for name, rows in wb.items() if name.strip().lower() == "innhold"), [])
+        titles = {str(r.get("A")).strip(): str(r.get("B")) for r in index if r.get("A") and r.get("B")}
+        for rows in wb.values():
+            fid = str(rows[0].get("A")).strip() if rows and rows[0].get("A") else None
+            if fid in titles:
+                figs.append((titles[fid], rows))
+
+    def figure(pattern):
+        for title, rows in figs:
+            if re.search(pattern, title, re.I):
+                return rows
+        raise RuntimeError(f"budget {year}: no figure titled like {pattern!r}")
+
+    def column(rows, pattern, sign=1.0):
+        """Year series from the columns whose header matches: the outturn column where it has a value, otherwise the estimate column."""
+        hdr = {k: str(v) for k, v in rows[1].items() if v}
+        cols = [k for k, v in hdr.items() if k != "A" and re.search(pattern, v, re.I) and not re.search("gjennomsnitt", v, re.I)]
+        cols.sort(key=lambda k: "anslag" in hdr[k].lower())
+        if not cols:
+            raise RuntimeError(f"budget {year}: no column like {pattern!r} in {list(hdr.values())}")
+        per, val = [], []
+        for r in rows[2:]:
+            if not isinstance(r.get("A"), float):
+                continue
+            v = next((r[k] for k in cols if isinstance(r.get(k), float)), None)
+            if v is not None:
+                per.append(str(int(r["A"])))
+                val.append(round(sign * v, 2))
+        return per, val
+
+    est = f"The latest years are estimates and {year} is the budget proposal."
+    f_gdp = figure(r"^Strukturelt oljekorrigert budsjettunderskudd\. Prosent av trend-BNP for Fastlands-Norge")
+    f_imp = figure(r"Endring fra året før \(budsjettindikator\)")
+    f_fund = figure(r"^Strukturelt oljekorrigert budsjettunderskudd\. Prosent av Statens pensjonsfond utland")
+    f_share = figure(r"^Bruken av fondsmidler som andel av utgifter i statsbudsjettet")
+    f_bal = figure(r"^Oljekorrigert og strukturell oljekorrigert budsjettbalanse\. Prosent av trend-BNP")
+    f_pub = figure(r"^Utgifter og skatte- og avgiftsinntekter i offentlig forvaltning\. Prosent av BNP for Fastlands-Norge")
+    series = {
+        "deficit_gdp": S("Structural non-oil deficit", "per cent of trend GDP for Mainland Norway", "A", *column(f_gdp, r"^SOBU"), 1, note=est),
+        "oil_corrected_gdp": S("Oil-corrected deficit (not cyclically adjusted)", "per cent of trend GDP for Mainland Norway", "A", *column(f_bal, r"^Oljekorrigert budsjettbalanse", -1.0), 1),
+        "impulse": S("Change in the structural non-oil deficit (budget indicator)", "percentage points of trend GDP", "A", *column(f_imp, r"^Budsjettimpulser"), 1),
+        "fund_pct": S("Structural non-oil deficit as a share of the oil fund (fund spending)", "per cent of the fund", "A", *column(f_fund, r"^Uttaksprosent"), 1),
+        "expected_return": S("Expected real return on the fund (the fiscal rule)", "per cent of the fund", "A", *column(f_fund, r"^Forventet realavkastning"), 1),
+        "fund_share_budget": S("Fund spending as a share of state budget expenditure", "per cent of expenditure", "A", *column(f_share, r"^Bruk av fondsmidler"), 1),
+        "public_expenditure": S("General government expenditure", "per cent of GDP for Mainland Norway", "A", *column(f_pub, r"^Offentlige utgifter"), 1),
+        "tax_revenue": S("General government tax revenue", "per cent of GDP for Mainland Norway", "A", *column(f_pub, r"^Skatte- og avgiftsinntekter"), 1),
+    }
+    return {"series": series, "breakdowns": breakdowns, "budget_year": year, "totals": totals,
+            "sources": [src(f"Ministry of Finance, Nasjonalbudsjettet {year}, data behind the figures", None, fig_url, None, est),
+                        src(f"Ministry of Finance, state budget {year}, revenue and expenditure", None, bud_url, None,
+                            "The government's proposal, before the Storting's budget settlement.")]}
+
+
 # --------------------------------------------------------------------------- main
 
 def main() -> int:
@@ -978,6 +1162,7 @@ def main() -> int:
     run("trade", ind_trade)
     run("current_account", ind_current_account, gdp)
     run("oil_fund", ind_oil_fund, gdp)
+    run("budget", ind_budget)
     run("house_prices", ind_house_prices)
     run("productivity", ind_productivity)
     run("wages", ind_wages)
