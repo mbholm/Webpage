@@ -760,6 +760,8 @@ def ind_wages() -> dict:
                             "Labour cost surveys every fourth year (2008, 2012, 2016) and annual estimates from 2020. Converted to euro at annual average exchange rates, so the krone's movements show up in Norway's level.")]}
 
 
+AVG_YEARS = 30   # the labour share chart draws each series' average over this many years (avgYears in dashboard.js)
+
 # The eleven manufacturing sectors at the A38 level, as in Holm and Jasinski, «Lønnsandelen i industrien»
 MFG_A38 = ["A38NP2X10_12", "A38NP2X13_15", "A38NP2X16_18", "A38NP2X19_21", "A38NP2X22_23", "A38NP2X24_25",
            "A38NP2X26", "A38NP2X27", "A38NP2X28", "A38NP2X29_30", "A38NP2X31_33"]
@@ -834,7 +836,8 @@ def mfg_common_component() -> dict:
         com, expl = pc1_expanding(years, S_, GP)
         ok = [i for i, c in enumerate(com) if c is not None]
         shift = sum(tot[i] for i in ok) / len(ok) - sum(com[i] for i in ok) / len(ok)   # re-centre on the aggregate's mean over the same years
-        out[name] = [None if c is None else round(c + shift, 1) for c in com]
+        out[name] = [None if c is None else round(c + shift, 1) for c in com]      # the paper's level (figure 5)
+        out[name + "_raw"] = com                                                    # before re-centring
         out[name + "_total"] = [round(x, 1) for x in tot]
         out[name + "_explained"] = expl
     return out
@@ -847,16 +850,29 @@ def ind_labour_shares() -> dict:
     cc = mfg_common_component()
     cc_note = ("First principal component of the labour shares of the eleven A38 manufacturing sectors, computed in real time as in Holm and Jasinski: "
                "for each year, sector means, standard deviations, loadings and value-added weights are estimated on data up to five years earlier "
-               "(at least 25 years, so the series starts in 1999). The level is re-centred on the mean of the aggregate manufacturing share.")
+               f"(at least 25 years, so the series starts in 1999). The level of a principal component is a normalisation. Here it is set so that the component's "
+               f"average equals the average of the manufacturing labour share over the past {AVG_YEARS} years, the dashed line in the chart. "
+               "The paper centres it on the mean of the manufacturing share over the component's own years, which moves the whole line by a constant only.")
     series = {}
     for k, lab, (years, gross, net) in shares:
         series[f"gross_{k}"] = S(f"Gross labour share, {lab}", "per cent", "A", years, gross, 1, derived=True)
     first = next(i for i, v in enumerate(cc["gross"]) if v is not None)      # the real-time component starts when the window is long enough
     cc = {k: (v[first:] if isinstance(v, list) else v) for k, v in cc.items()}
-    series["gross_pc"] = S("Gross labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], cc["gross"], 1, derived=True, note=cc_note)
+    mfg_years, mfg_gross, mfg_net = next(v for k, _, v in shares if k == "mfg")
+
+    def recentre(raw, ref_vals):
+        """Shift the component so that its mean equals the manufacturing share's average over the last AVG_YEARS years (the chart's dashed line)."""
+        ref = [(y, v) for y, v in zip(mfg_years, ref_vals) if v is not None][-AVG_YEARS:]
+        window = {y for y, _ in ref}
+        target = sum(v for _, v in ref) / len(ref)
+        inside = [c for y, c in zip(cc["years"], raw) if c is not None and y in window]
+        shift = target - sum(inside) / len(inside)
+        return [None if c is None else round(c + shift, 3) for c in raw]
+
+    series["gross_pc"] = S("Gross labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], recentre(cc["gross_raw"], mfg_gross), 1, derived=True, note=cc_note)
     for k, lab, (years, gross, net) in shares:
         series[f"net_{k}"] = S(f"Net labour share, {lab}", "per cent", "A", years, net, 1, derived=True)
-    series["net_pc"] = S("Net labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], cc["net"], 1, derived=True, note=cc_note)
+    series["net_pc"] = S("Net labour share, manufacturing, common component across sectors", "per cent", "A", cc["years"], recentre(cc["net_raw"], mfg_net), 1, derived=True, note=cc_note)
     return {"series": series,
             "method": ("Labour shares are computed from the national accounts in current prices. Gross labour share = compensation of employees / "
                        "(compensation of employees + consumption of fixed capital + net operating surplus). Net labour share = compensation of employees / "

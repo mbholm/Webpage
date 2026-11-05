@@ -119,26 +119,6 @@
       defaultYears: 10,
     },
     {
-      id: 'trade', title: 'Trade balance', kicker: 'External trade', goodUp: null,
-      desc: 'Monthly trade in goods, seasonally adjusted. The total balance is dominated by oil and gas. The mainland balance compares exports excluding oil, gas, ships and platforms with imports excluding ships and platforms.',
-      headline: { series: 'balance', fmt: (v) => fmt.bnFromMn(v), sub: 'goods, seasonally adjusted, per month' },
-      secondary: [{ series: 'mainland_balance', label: 'mainland balance', fmt: fmt.bnFromMn }],
-      spark: 'balance', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
-      views: [{ s: 'balance', short: 'Trade balance', kind: 'bar', on: true }, { s: 'exports', short: 'Exports', kind: 'line' }, { s: 'imports', short: 'Imports', kind: 'line' }, { s: 'oilgas_exports', short: 'Oil & gas exports', kind: 'line' },
-              { s: 'mainland_exports', short: 'Mainland exports', kind: 'line' }, { s: 'imports_ex_ships', short: 'Imports excl. ships', kind: 'line' }, { s: 'mainland_balance', short: 'Mainland balance', kind: 'line' }],
-      defaultYears: 10,
-    },
-    {
-      id: 'current_account', title: 'Current account', kicker: 'Balance of payments', goodUp: null,
-      desc: 'Quarterly current account balance and its components, in current prices. The share of GDP uses four-quarter sums of both the balance and nominal GDP.',
-      headline: { series: 'pct_gdp', fmt: (v) => fmt.pct(v), sub: 'per cent of GDP, last four quarters' },
-      secondary: [{ series: 'balance', label: 'latest quarter', fmt: fmt.bnFromMn }],
-      spark: 'pct_gdp', sparkZero: true,
-      views: [{ s: 'pct_gdp', short: '% of GDP', kind: 'line', on: true }, { s: 'balance', short: 'Balance', kind: 'bar' }, { s: 'goods_services', short: 'Goods & services', kind: 'line' }, { s: 'goods', short: 'Goods', kind: 'line' },
-              { s: 'services', short: 'Services', kind: 'line' }, { s: 'income', short: 'Income & transfers', kind: 'line' }, { s: 'balance_4q', short: 'Balance, 4-quarter sum', kind: 'line' }],
-      scale: 1 / 1000, unitLabel: 'NOK bn', defaultYears: 20,
-    },
-    {
       id: 'oil_fund', title: 'The oil fund', kicker: 'Government Pension Fund Global', goodUp: true,
       desc: 'Market value of the Government Pension Fund Global at year-end, by asset class, as published by NBIM. The current year shows the latest value NBIM has published, not a year-end value. The asset classes are also shown as shares of the fund. Management costs are the annual costs of running the fund, as a share of assets under management and in kroner.',
       headline: { series: 'value', fmt: (v) => fmt.trnFromBn(v), sub: 'market value', latestLabel: 'latest' },
@@ -209,15 +189,35 @@
     },
     {
       id: 'labour_shares', title: 'Labour shares', kicker: 'Income distribution', goodUp: null,
-      desc: 'The share of factor income that goes to labour, by industry, computed from the annual national accounts. The gross labour share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus. The net labour share leaves capital consumption out of the denominator. The headline is Mainland Norway excluding general government. The common component for manufacturing is the first principal component of the sectoral labour shares, computed in real time as in Holm and Jasinski (Samfunnsøkonomen). Dashed lines show each series’ average over the past 30 years.',
+      desc: 'The share of factor income that goes to labour, by industry, computed from the annual national accounts. The gross labour share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus. The net labour share leaves capital consumption out of the denominator. The headline is Mainland Norway excluding general government. The common component for manufacturing is the first principal component of the sectoral labour shares, computed in real time as in Holm and Jasinski (Samfunnsøkonomen), and centred on the same average as the manufacturing share. Dashed lines show each series’ average over the past 30 years.',
       headline: { series: 'gross_business', fmt: (v) => fmt.pct(v), sub: 'gross labour share, mainland business sector' },
       secondary: [{ series: 'net_business', label: 'net', fmt: fmt.pct }],
       spark: 'gross_business',
       views: ['gross', 'net'].flatMap((g) => [['business', 'Mainland excl. government'], ['mfg', 'Manufacturing'], ['pc', 'Manufacturing, common component'], ['mainland', 'Mainland Norway'], ['total', 'Total economy'], ['oilgas', 'Oil and gas'],
                   ['construction', 'Construction'], ['trade', 'Trade'], ['transport', 'Transport'], ['accommodation', 'Accommodation and food'], ['ict', 'Information and communication'],
                   ['finance', 'Finance'], ['professional', 'Professional services']]
-                .map(([k, t]) => ({ s: `${g}_${k}`, short: t, tip: `${g === 'gross' ? 'Gross' : 'Net'}, ${t}`, kind: 'line', on: k === 'business' || k === 'mfg', group: g === 'gross' ? 'Gross labour share' : 'Net labour share' }))),
+                .map(([k, t]) => ({ s: `${g}_${k}`, short: t, tip: `${g === 'gross' ? 'Gross' : 'Net'}, ${t}`, avgFrom: k === 'pc' ? `${g}_mfg` : null, kind: 'line', on: k === 'business' || k === 'mfg', group: g === 'gross' ? 'Gross labour share' : 'Net labour share' }))),
       defaultYears: 30, showMethod: true, avgYears: 30,
+    },
+    {
+      id: 'trade', title: 'Trade balance', kicker: 'External trade', goodUp: null,
+      desc: 'Monthly trade in goods, seasonally adjusted. The total balance is dominated by oil and gas. The mainland balance compares exports excluding oil, gas, ships and platforms with imports excluding ships and platforms.',
+      headline: { series: 'balance', fmt: (v) => fmt.bnFromMn(v), sub: 'goods, seasonally adjusted, per month' },
+      secondary: [{ series: 'mainland_balance', label: 'mainland balance', fmt: fmt.bnFromMn }],
+      spark: 'balance', sparkZero: true, scale: 1 / 1000, unitLabel: 'NOK bn',
+      views: [{ s: 'balance', short: 'Trade balance', kind: 'bar', on: true }, { s: 'exports', short: 'Exports', kind: 'line' }, { s: 'imports', short: 'Imports', kind: 'line' }, { s: 'oilgas_exports', short: 'Oil & gas exports', kind: 'line' },
+              { s: 'mainland_exports', short: 'Mainland exports', kind: 'line' }, { s: 'imports_ex_ships', short: 'Imports excl. ships', kind: 'line' }, { s: 'mainland_balance', short: 'Mainland balance', kind: 'line' }],
+      defaultYears: 10,
+    },
+    {
+      id: 'current_account', title: 'Current account', kicker: 'Balance of payments', goodUp: null,
+      desc: 'Quarterly current account balance and its components, in current prices. The share of GDP uses four-quarter sums of both the balance and nominal GDP.',
+      headline: { series: 'pct_gdp', fmt: (v) => fmt.pct(v), sub: 'per cent of GDP, last four quarters' },
+      secondary: [{ series: 'balance', label: 'latest quarter', fmt: fmt.bnFromMn }],
+      spark: 'pct_gdp', sparkZero: true,
+      views: [{ s: 'pct_gdp', short: '% of GDP', kind: 'line', on: true }, { s: 'balance', short: 'Balance', kind: 'bar' }, { s: 'goods_services', short: 'Goods & services', kind: 'line' }, { s: 'goods', short: 'Goods', kind: 'line' },
+              { s: 'services', short: 'Services', kind: 'line' }, { s: 'income', short: 'Income & transfers', kind: 'line' }, { s: 'balance_4q', short: 'Balance, 4-quarter sum', kind: 'line' }],
+      scale: 1 / 1000, unitLabel: 'NOK bn', defaultYears: 20,
     },
   ];
 
@@ -530,7 +530,10 @@
         if (d.v.kind !== 'line' || d.s.projection) return;
         const obs = d.s.periods.map((p, i) => [p, d.s.values[i]]).filter(([, v]) => v != null).slice(-state.def.avgYears);
         if (obs.length < 2) return;
-        const mean = (obs.reduce((a, [, v]) => a + v, 0) / obs.length) * d.scale;
+        // avgFrom: the line is drawn at another series' average (the common component is centred on the manufacturing share's average)
+        const ref = d.v.avgFrom && state.ind.series[d.v.avgFrom];
+        const src = ref ? ref.periods.map((p, i) => [p, ref.values[i]]).filter(([, v]) => v != null).slice(-state.def.avgYears) : obs;
+        const mean = (src.reduce((a, [, v]) => a + v, 0) / src.length) * d.scale;
         const win = new Set(obs.map(([p]) => p));
         ds.push({ label: `${d.label}, average`, data: periods.map((p) => (win.has(p) ? mean : null)), _avg: true, type: 'line', borderColor: cssVar(SLOTS[d.slot % 8]),
                   borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 0, spanGaps: true, order: 0 });

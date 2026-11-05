@@ -107,7 +107,9 @@ Method notes: TFP is computed in growth form (Törnqvist), weighting hours and c
 share from the national accounts (table 09170), then cumulated into an index. Labour shares follow the
 definitions in «Lønnsandelen i industrien»: gross = W/(W + capital consumption + operating surplus),
 net = W/(W + operating surplus). The common component for manufacturing is a port of
-`pc1_expanding.m` from the paper's replication package and reproduces its published key numbers.
+`pc1_expanding.m` from the paper's replication package and reproduces its published key numbers. Its level
+is set so that its average equals the 30-year average of the manufacturing share (the dashed line),
+which differs from the paper's centring by a constant only.
 
 A tile can be linked directly: `dashboard.html#inflation` opens it, and
 `dashboard.html#oil_fund=costs` opens it with the named series switched on.
