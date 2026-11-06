@@ -1468,20 +1468,29 @@ def _sdmx_csv(url: str, by: str = "REF_AREA") -> dict[str, dict[str, float]]:
 
 
 def cmp_policy_rates() -> dict[str, tuple[list, list]]:
-    """Central bank policy rates from the BIS, monthly at the end of the month. The current month is the latest daily value."""
+    """Central bank policy rates from the BIS, daily, as step series: the first day, every day the rate changed and the last day.
+    The page fills in the days in between (series flag `steps`), which keeps 27 years of daily rates for ten series small.
+    The BIS publishes some central banks for every calendar day and others for business days only, and the rate holds on the
+    days in between. A hole of more than ten days is kept as a hole. All series end on the latest day the BIS has for every
+    central bank, so the tiles compare the same day (a central bank more than a week behind the others keeps its own last day)."""
     if "bis" not in _CMP:
         areas = "+".join(sorted({c[1] for c in CMP_COUNTRIES.values() if c[1]}))
-        url = "https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBPOL/1.0/{}." + areas + "?format=csv&startPeriod={}"
-        monthly = _sdmx_csv(url.format("M", "2000-01"))
-        daily = _sdmx_csv(url.format("D", (datetime.now(timezone.utc) - timedelta(days=45)).strftime("%Y-%m-%d")))
+        daily = _sdmx_csv("https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBPOL/1.0/D." + areas + "?format=csv&startPeriod=2000-01-01")
+        day = datetime.fromisoformat
+        newest = max(max(d) for d in daily.values())
+        end = min(max(d) for d in daily.values() if (day(newest) - day(max(d))).days <= 7)
         out = {}
-        for area, m in monthly.items():
-            d = daily.get(area)
-            if d:
-                day = max(d)
-                m[day[:7]] = d[day]
-            ps = sorted(m)
-            out[area] = (ps, [m[p] for p in ps])
+        for area, d in daily.items():
+            ds = [p for p in sorted(d) if p <= end]
+            ps, vs = [ds[0]], [d[ds[0]]]
+            for prev, p in zip(ds, ds[1:]):
+                if (day(p) - day(prev)).days > 10:   # no figures for a longer stretch: leave it empty instead of carrying the rate forward
+                    ps.append((day(prev) + timedelta(days=1)).strftime("%Y-%m-%d")); vs.append(None)
+                if d[p] != vs[-1]:
+                    ps.append(p); vs.append(d[p])
+            if ps[-1] != ds[-1]:
+                ps.append(ds[-1]); vs.append(d[ds[-1]])
+            out[area] = (ps, vs)
         _CMP["bis"] = out
     return _CMP["bis"]
 
@@ -1865,13 +1874,13 @@ def cmp_rates(block: str) -> dict:
     for key, whose in CMP_POLICY[block].items():
         p, v = policy[CMP_COUNTRIES[whose][1]]
         label = f"Policy rate, {cmp_name(key)}" + ("" if key == whose else " (the euro area’s rate, set by the European Central Bank)")
-        series[f"policy_{key}"] = S(label, "percent", "M", p, v, 2)
+        series[f"policy_{key}"] = S(label + ", daily", "percent", "D", p, v, 2, steps=True)
     for key in CMP_YIELDS[block]:
         p, v = yields[CMP_COUNTRIES[key][2]]
         series[f"gov10y_{key}"] = S(f"10-year government bond yield, {cmp_name(key)}", "percent", "M", p, v, 2)
     return {"series": series,
             "sources": [src("Bank for International Settlements, central bank policy rates", "WS_CBPOL", "https://data.bis.org/topics/CBPOL",
-                            note=("End of month, and the latest daily value for the current month. The BIS picks each central bank’s main policy rate. For the euro area "
+                            note=("Daily, up to the latest day the BIS has published for all the central banks. The BIS picks each central bank’s main policy rate. For the euro area "
                                   "it is the deposit facility rate from September 2024 and the main refinancing rate before that.")),
                         src("OECD, long-term interest rates (Main Economic Indicators)", "DSD_STES@DF_FINMARK", "https://data-explorer.oecd.org/vis?df[ds]=dsDisseminateFinalDMZ&df[id]=DSD_STES%40DF_FINMARK&df[ag]=OECD.SDD.STES",
                             note="Monthly averages of yields on government bonds with about ten years to maturity.")]}

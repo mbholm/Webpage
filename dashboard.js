@@ -335,9 +335,9 @@
       }),
       mk('rates', {
         title: 'Interest rates',
-        desc: `Central bank policy rates at the end of each month, from the Bank for International Settlements, and yields on ten-year government bonds as dashed lines, from the OECD. ${B.ratesNote}`,
+        desc: `Central bank policy rates day by day, from the Bank for International Settlements. Yields on ten-year government bonds are monthly averages from the OECD. The chart shows either the daily policy rates or the monthly bond yields, not both at once. ${B.ratesNote}`,
         compare: { rows: rows(P, 'policy'), fmt: (v) => fmt.pct(v, 2), sub: 'central bank policy rate' },
-        views: [...views(P, 'policy', 'Policy rate', { on: true, tip: 'policy rate' }), ...views(Y, 'gov10y', '10-year government bond yield', { dash: true, tip: '10-year yield' })],
+        views: [...views(P, 'policy', 'Policy rate, daily', { on: true, tip: 'policy rate' }), ...views(Y, 'gov10y', '10-year government bond yield, monthly', { tip: '10-year yield' })],
         defaultYears: 20,
       }),
       mk('unemployment', {
@@ -382,8 +382,25 @@
   const tilesEl = document.getElementById('tiles');
   fetch('data/dashboard.json', { cache: 'no-cache' })
     .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then((d) => { DATA = d; renderMeta(); renderTiles(); openFromHash(); })
+    .then((d) => { expandSteps(d); DATA = d; renderMeta(); renderTiles(); openFromHash(); })
     .catch((e) => { tilesEl.innerHTML = `<p class="d-error">Could not load the data file (${e.message}). If you opened this page from disk, serve it over http. The data is loaded with fetch().</p>`; });
+
+  // Daily series that seldom change (policy rates) are stored as steps: the first day, the days the value changed and the last day.
+  // Here they become ordinary daily series with every calendar day, each day carrying the latest value.
+  function expandSteps(d) {
+    const iso = (t) => new Date(t).toISOString().slice(0, 10);
+    Object.values(d.indicators).forEach((ind) => Object.values(ind.series || {}).forEach((s) => {
+      if (!s.steps || s.periods.length < 2) return;
+      const periods = [], values = [];
+      let k = 0;
+      for (let t = Date.parse(s.periods[0] + 'T00:00:00Z'), end = Date.parse(s.periods[s.periods.length - 1] + 'T00:00:00Z'); t <= end; t += 864e5) {
+        const p = iso(t);
+        while (k + 1 < s.periods.length && s.periods[k + 1] <= p) k++;
+        periods.push(p); values.push(s.values[k]);
+      }
+      s.periods = periods; s.values = values;
+    }));
+  }
 
   function renderMeta() {
     const el = document.getElementById('dash-meta');
@@ -446,7 +463,7 @@
   function sparkMulti(ind, def) {
     const items = (def.sparks || def.compare.rows).map((r) => ({ ...r, s: ind.series[r.series] })).filter((r) => r.s);
     if (!items.length) return '';
-    const f = items[0].s.freq, n = f === 'M' ? 120 : f === 'Q' ? 40 : 25;
+    const f = items[0].s.freq, n = f === 'D' ? 3653 : f === 'M' ? 120 : f === 'Q' ? 40 : 25;   // ten years, except annual series
     const when = new Map();
     items.forEach((r) => r.s.periods.forEach((p, i) => { if (r.s.values[i] != null) when.set(p, periodTime(p)); }));
     const periods = [...when.keys()].sort((a, b) => when.get(a) - when.get(b)).slice(-n);

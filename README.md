@@ -125,7 +125,9 @@ The comparison blocks (`CMP_*` and `cmp_*` in the build script, `BLOCKS` and `co
 - The countries are set in `CMP_BLOCKS` (data) and `BLOCKS` (display). The same seven tiles are generated for each block.
   A country keeps one color across a block, and a dashed line is a second measure for the same country.
 - GDP, inflation (HICP), unemployment and employment (harmonized labor force surveys) come from Eurostat, one
-  call per dataset for all countries. Policy rates come from the BIS and ten-year bond yields from the OECD.
+  call per dataset for all countries. Policy rates come from the BIS (daily) and ten-year bond yields from the OECD (monthly averages).
+  The daily policy rates are stored as steps (series flag `steps`: the first day, the days the rate changed and the last day)
+  and `dashboard.js` fills in the days in between when the page loads.
   Mainland Norway comes from Statistics Norway, taken from the `gdp` and `productivity` indicators.
 - Productivity is not Eurostat's own indicator. Labor productivity and TFP are computed for every country by
   `growth_accounting`, the same function as for Mainland Norway, from Eurostat's national accounts (value added
