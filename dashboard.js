@@ -121,8 +121,10 @@
     },
     {
       id: 'fx', title: 'Exchange rates', kicker: 'The krone', goodUp: null,
-      desc: 'The import-weighted krone index I-44 (higher means a weaker krone) and the krone against the euro and the US dollar. Monthly averages give the long history. The daily series cover recent years.',
-      headline: { series: 'i44_daily', fmt: (v) => fmt.plain(v, 1), sub: 'I-44 index, 1995 = 100 (higher = weaker krone)' },
+      desc: 'The import-weighted krone index I-44 and the krone against the euro, the US dollar and other currencies, in kroner per unit of foreign currency. A lower value is a stronger krone, so the charts have an inverted scale: up means that the krone appreciates. Monthly averages give the long history. The daily series cover recent years.',
+      headline: { series: 'i44_daily', fmt: (v) => fmt.plain(v, 1), sub: 'I-44 index, 1995 = 100 (lower = stronger krone)' },
+      // invert: a lower value is a stronger krone, so the scale is turned upside down and both directions are written in the chart
+      invert: { up: 'Stronger krone', down: 'Weaker krone', spark: 'Inverted scale: up = stronger krone' },
       secondary: [{ series: 'eurnok_daily', label: 'EUR', fmt: (v) => fmt.plain(v, 2) }, { series: 'usdnok_daily', label: 'USD', fmt: (v) => fmt.plain(v, 2) }],
       spark: 'i44',
       views: [{ s: 'i44', short: 'I-44', kind: 'line', on: true }, { s: 'eurnok', short: 'EUR/NOK', kind: 'line' }, { s: 'usdnok', short: 'USD/NOK', kind: 'line' }, { s: 'gbpnok', short: 'GBP/NOK', kind: 'line' }, { s: 'seknok', short: 'SEK/NOK (per 100)', kind: 'line' },
@@ -434,6 +436,7 @@
         ${deltaHtml(def, s, L, P)}
         <div class="t-sub">${sec}</div>
         <div class="t-spark">${sparkline(ind.series[def.spark], def)}</div>
+        ${def.invert ? `<div class="t-sparknote">▲ ${def.invert.spark}</div>` : ''}
         <div class="t-foot"><span>${def.kicker}</span><span class="more">Explore →</span></div>`;
       host.appendChild(b);
     }
@@ -474,7 +477,9 @@
     else if (s.unit.startsWith('NOK million')) txt = fmt.signedBnFromMn(d);
     else if (s.unit.startsWith('NOK billion')) txt = fmt.signedBn(d);
     else txt = (d > 0 ? '+' : '') + fmt.num(d, s.decimals);
-    const arrow = d > 0 ? '▲' : d < 0 ? '▼' : '■';
+    let arrow = d > 0 ? '▲' : d < 0 ? '▼' : '■';
+    // inverted indicators: the arrow follows the direction in the chart, and the direction is written out next to the change
+    if (def.invert && d !== 0) { arrow = d < 0 ? '▲' : '▼'; txt += ` (${(d < 0 ? def.invert.up : def.invert.down).toLowerCase()})`; }
     // color only when a direction is unambiguously good or bad for the economy; otherwise stay neutral
     let cls = 'flat';
     if (d !== 0 && def.goodUp != null) cls = (d > 0) === def.goodUp ? 'up' : 'down';
@@ -491,7 +496,7 @@
     if (def.sparkZero) { min = Math.min(min, 0); max = Math.max(max, 0); }
     if (max === min) { max += 1; min -= 1; }
     const x = (i) => pad + (i / (vals.length - 1)) * (W - 2 * pad);
-    const y = (v) => pad + (1 - (v - min) / (max - min)) * (H - 2 * pad);
+    const y = (v) => pad + (def.invert ? (v - min) / (max - min) : 1 - (v - min) / (max - min)) * (H - 2 * pad);
     let d = '', pen = false;
     vals.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = true; });
     const zero = def.sparkZero && min < 0 && max > 0 ? `<line class="zero" x1="0" x2="${W}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>` : '';
@@ -701,6 +706,22 @@
     },
   };
 
+  // Inverted charts (def.invert): what up and down mean, written in the two left corners of the plot area
+  const directionMarks = {
+    id: 'directionMarks',
+    afterDatasetsDraw(c, args, opts) {
+      if (!opts.up) return;
+      const { left, top, bottom } = c.chartArea, ctx = c.ctx;
+      ctx.save(); ctx.font = '600 12px Inter, system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      [['▲ ' + opts.up, top + 13], ['▼ ' + opts.down, bottom - 13]].forEach(([text, y]) => {
+        const w = ctx.measureText(text).width;
+        ctx.globalAlpha = 0.88; ctx.fillStyle = cssVar('--viz-surface'); ctx.fillRect(left + 6, y - 10, w + 12, 20);
+        ctx.globalAlpha = 1; ctx.fillStyle = cssVar('--viz-ink'); ctx.fillText(text, left + 12, y);
+      });
+      ctx.restore();
+    },
+  };
+
   const axisLabel = (p) => {
     const f = freqOf(p);
     if (f === 'A') return p;
@@ -772,13 +793,15 @@
     }
     const inflationKeys = ['cpi_yoy', 'cpiate_yoy', 'cpiat_yoy', 'proj_cpi', 'proj_cpiate'];
     const showTarget = state.def.target && datasets.some((d) => inflationKeys.includes(d.v.s)) && datasets.every((d) => inflationKeys.includes(d.v.s));
-    const opts = baseOptions(periods, unit, { crosshair: {}, targetLine: showTarget ? { value: state.def.target, label: 'Target 2 %' } : {} });
+    const inv = state.def.invert;
+    const opts = baseOptions(periods, unit, { crosshair: {}, targetLine: showTarget ? { value: state.def.target, label: 'Target 2 %' } : {}, directionMarks: inv ? { up: inv.up, down: inv.down } : {} });
+    if (inv) { opts.scales.y.reverse = true; opts.scales.y.title.display = true; opts.scales.y.title.text = (unit ? unit + ', ' : '') + 'inverted scale'; }
     const emphasizeZero = datasets.some((d) => d.v.kind === 'bar' || d.data.some((v) => v != null && v < 0));
     if (emphasizeZero) opts.scales.y.grid.color = (ctx) => (ctx.tick.value === 0 ? cssVar('--viz-axis') : cssVar('--viz-grid'));
     const ctx = document.getElementById('d-canvas').getContext('2d');
     if (chart) chart.destroy();
-    chart = new Chart(ctx, { type: 'line', data: { labels: periods, datasets: ds }, options: opts, plugins: [crosshair, targetLine] });
-    document.getElementById('d-legend').innerHTML = datasets.map((d) =>
+    chart = new Chart(ctx, { type: 'line', data: { labels: periods, datasets: ds }, options: opts, plugins: [crosshair, targetLine, directionMarks] });
+    document.getElementById('d-legend').innerHTML = (inv ? `<span class="inv">Inverted scale: up means a ${inv.up.toLowerCase()}.</span>` : '') + datasets.map((d) =>
       `<span><span class="sw ${d.v.kind}" style="${swatchStyle(state.def, d.v, d.s)}"></span>${d.s.label}${d.s.derived ? ' *' : ''}</span>`).join('')
       + avgs.map(({ d, mean, from, to }) =>
         `<span><span class="sw line" style="background:repeating-linear-gradient(90deg, var(${SLOTS[d.slot % 8]}) 0 4px, transparent 4px 7px)"></span>${d.label}: average ${from}–${to}, ${fmt.num(mean, d.s.decimals)}${unitShort(d.unit) ? ' ' + unitShort(d.unit) : ''}</span>`).join('');

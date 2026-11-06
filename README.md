@@ -141,6 +141,11 @@ The comparison blocks (`CMP_*` and `cmp_*` in the build script, `BLOCKS` and `co
   Analysis' flat file (`FixedAssets.txt`, about 16 MB, read as a stream). United States inflation is the national
   CPI, not a harmonized index. If one of these sources fails, the United States series from the previous run
   are kept and the reason is written under `us_kept` in that indicator.
+  **FRED does not answer GitHub's servers** (requests time out), so on the live site the United States figures
+  that come through FRED (GDP, consumer prices, employment rate, wages, productivity) are the ones in the committed
+  `data/dashboard.json`. To update them, run `python build_dashboard_data.py` on your own computer and push.
+  FRED requests give up after 20 seconds and are not repeated within a run, and the fetch step in the workflow is
+  capped at six minutes, so a source that does not answer cannot hold the deploy up.
 - Wages: growth in wages and salaries per hour worked by employees (`nama_10_a10` item D11 over `nama_10_a10_e`
   item SAL_DC), and the same deflated by the annual average HICP (`prc_hicp_ainr`). For the United States it is
   the Bureau of Economic Analysis' wages and salaries per full-time equivalent employee (FRED series

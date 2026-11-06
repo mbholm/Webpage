@@ -518,7 +518,7 @@ def ind_fx() -> dict:
     m = nb_series("EXR", "M.I44+EUR+USD+SEK+GBP.NOK.SP", split_by="BASE_CUR", startPeriod="1990-01-01")
     d = nb_series("EXR", "B.I44+EUR+USD.NOK.SP", split_by="BASE_CUR", startPeriod="2019-01-01")
     return {"series": {
-                "i44": S("Import-weighted krone exchange rate, I-44 (1995=100, higher = weaker krone)", "index", "M", *m["I44"], 2),
+                "i44": S("Import-weighted krone exchange rate, I-44 (1995=100, a lower value is a stronger krone)", "index", "M", *m["I44"], 2),
                 "i44_daily": S("I-44, daily", "index", "D", *d["I44"], 2),
                 "eurnok": S("EUR/NOK, monthly average", "NOK per EUR", "M", *m["EUR"], 4),
                 "eurnok_daily": S("EUR/NOK, daily", "NOK per EUR", "D", *d["EUR"], 4),

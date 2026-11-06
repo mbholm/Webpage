@@ -77,6 +77,8 @@ body.wide main { max-width: 1180px; padding-left: 3rem; padding-right: 3rem; }
 .tile .t-spark .line { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
 .tile .t-spark .zero { stroke: var(--viz-axis); stroke-width: 1; stroke-dasharray: 2 3; }
 .tile .t-spark .dot { fill: var(--accent); }
+.tile .t-sparknote { font-size: .72rem; color: var(--muted); margin-top: .2rem; }
+.d-legend .inv { flex-basis: 100%; font-weight: 600; color: var(--text, inherit); }
 .tile .t-foot { display: flex; justify-content: space-between; font-size: .72rem; color: var(--faint); margin-top: .2rem; }
 .tile .t-foot .more { color: var(--accent); }
 .tile.stale .t-period::after { content: " · stale"; color: var(--down); }
