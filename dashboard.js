@@ -405,7 +405,7 @@
   function renderMeta() {
     const el = document.getElementById('dash-meta');
     const gen = new Date(DATA.generated);
-    const parts = [`Data last fetched ${gen.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`, 'updated automatically every morning'];
+    const parts = [`Data last fetched ${gen.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`, 'updated automatically every day'];
     const errs = Object.keys(DATA.errors || {});
     if (errs.length) parts.push(`<span class="warn">last fetch failed for: ${errs.join(', ')} (showing older data)</span>`);
     el.innerHTML = parts.join(' · ');

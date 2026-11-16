@@ -75,7 +75,7 @@ and the US (GDP, inflation, interest rates, unemployment, employment, wages and 
 - `dashboard.css` holds the page's styles, including the chart palette.
 
 The browser cannot query SSB directly (no cross-origin header), so the data is pre-fetched: the deploy
-workflow runs `build_dashboard_data.py` on every push **and every morning at 08:30 Norwegian time** (schedule in
+workflow runs `build_dashboard_data.py` on every push **and once a day from 08:30 Norwegian time** (schedule in
 `.github/workflows/pages.yml`), so the live site refreshes daily without any commits. The committed
 `data/dashboard.json` is the fallback if a fetch fails in CI. To refresh locally:
 
@@ -171,9 +171,12 @@ which differs from the paper's centering by a constant only.
 A tile can be linked directly: `dashboard.html#inflation` opens it, and
 `dashboard.html#oil_fund=costs` opens it with the named series switched on.
 
-About the daily refresh: GitHub's clock is UTC, so the workflow has one schedule entry for summer time
-and one for winter time, and a small "gate" job that lets through the one that is 08:30 in Norway.
-Scheduled runs can start some minutes late. GitHub switches scheduled workflows off in a repository
+About the daily refresh: GitHub starts scheduled runs late, often by several hours (in November 2026 the
+08:30 runs started between 14:00 and 19:00 Norwegian time). The workflow therefore has several schedule
+entries through the day (UTC), and a small "gate" job lets a scheduled run through only when it is past
+08:30 in Norway and the live site's `data/dashboard.json` was not generated today. So the data refreshes
+once a day, at the first scheduled run GitHub gets to, and the later ones end after a few seconds.
+GitHub switches scheduled workflows off in a repository
 with no commits for 60 days and sends an e-mail first. Any push, or the "Enable workflow" button under
 the Actions tab, turns it back on. Each scheduled run shows up in the Actions tab with the event
 "schedule".

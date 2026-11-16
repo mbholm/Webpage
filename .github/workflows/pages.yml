@@ -4,11 +4,16 @@ on:
   push:
     branches: [main]
   schedule:
-    # Every morning at 08:30 Norwegian time: refresh the dashboard data and redeploy.
-    # GitHub's clock is UTC and ignores daylight saving time, so there is one entry for summer time
-    # (06:30 UTC) and one for winter time (07:30 UTC). The "gate" job lets only the right one through.
+    # Refresh the dashboard data once a day, from 08:30 Norwegian time. GitHub starts scheduled runs late,
+    # often by hours, so there are several entries (UTC) and the "gate" job lets the first one through that
+    # is past 08:30 in Norway and finds no data from today on the live site. The later ones then do nothing.
     - cron: "30 6 * * *"
     - cron: "30 7 * * *"
+    - cron: "30 8 * * *"
+    - cron: "30 9 * * *"
+    - cron: "30 10 * * *"
+    - cron: "30 11 * * *"
+    - cron: "30 13 * * *"
   workflow_dispatch:
 
 permissions:
@@ -27,13 +32,16 @@ jobs:
       go: ${{ steps.check.outputs.go }}
     steps:
       - id: check
-        name: Let a scheduled run through only if it is the 08:30 one in Norway
+        name: Let a scheduled run through if it is past 08:30 in Norway and the live data is not from today
         run: |
           go=true
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            offset=$(TZ=Europe/Oslo date +%z)
-            if [ "${{ github.event.schedule }}" = "30 6 * * *" ] && [ "$offset" != "+0200" ]; then go=false; fi
-            if [ "${{ github.event.schedule }}" = "30 7 * * *" ] && [ "$offset" = "+0200" ]; then go=false; fi   # also runs if the time zone lookup fails
+            now=$(TZ=Europe/Oslo date +%H%M); today=$(TZ=Europe/Oslo date +%F)
+            if [ $((10#$now)) -lt 830 ]; then go=false; echo "before 08:30 in Norway ($now)"; fi
+            # the day the live data file was generated, in Norwegian time (empty if the site does not answer, which means: refresh)
+            gen=$(curl -s -m 20 https://www.martinbholm.com/data/dashboard.json | grep -o '"generated":"[^"]*"' | cut -d'"' -f4)
+            last=$([ -n "$gen" ] && TZ=Europe/Oslo date -d "$gen" +%F || true)
+            if [ "$last" = "$today" ]; then go=false; echo "the live data is already from today ($gen)"; fi
           fi
           echo "go=$go" >> "$GITHUB_OUTPUT"
 
