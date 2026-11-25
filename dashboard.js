@@ -214,14 +214,17 @@
     },
     {
       id: 'labor_shares', title: 'Labor shares', kicker: 'Income distribution', goodUp: null,
-      desc: 'The share of factor income that goes to labor, by industry, computed from the annual national accounts. The gross labor share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus. The net labor share leaves capital consumption out of the denominator. The headline is the net labor share in manufacturing. The common component for manufacturing is the first principal component of the sectoral labor shares, computed in real time as in Holm and Jasinski (Samfunnsøkonomen), and centered on the same average as the manufacturing share. Dashed lines show each series’ average over the past 30 years.',
+      desc: 'The share of factor income that goes to labor, by industry, computed from the annual national accounts. The gross labor share divides compensation of employees by compensation plus consumption of fixed capital plus net operating surplus. The net labor share leaves capital consumption out of the denominator. The headline is the net labor share in manufacturing. The common component for manufacturing is the first principal component of the sectoral labor shares, computed in real time as in Holm and Jasinski (Samfunnsøkonomen), and centered on the same average as the manufacturing share. The quarterly series from the quarterly national accounts are compensation of employees as a share of value added, since SSB publishes no quarterly capital consumption or operating surplus by industry, and are best read as four-quarter moving shares because the quarters are not seasonally adjusted. Dashed lines show each series’ average over the past 30 years.',
       headline: { series: 'net_mfg', fmt: (v) => fmt.pct(v), sub: 'net labor share, manufacturing' },
       secondary: [{ series: 'gross_mfg', label: 'gross', fmt: fmt.pct }],
       spark: 'net_mfg',
-      views: ['gross', 'net'].flatMap((g) => [['mfg', 'Manufacturing'], ['pc', 'Manufacturing, common component'], ['business', 'Mainland excl. government'], ['mainland', 'Mainland Norway'], ['total', 'Total economy'], ['oilgas', 'Oil and gas'],
+      // gross and net: annual shares of factor income; q4 and q: quarterly shares of value added (no common component for those)
+      views: [['gross', 'Gross labor share', 'Gross'], ['net', 'Net labor share', 'Net'], ['q4', 'Quarterly, four-quarter moving', 'Four-quarter moving'], ['q', 'Quarterly', 'Quarterly']].flatMap(([g, group, tipWord]) =>
+                [['mfg', 'Manufacturing'], ['pc', 'Manufacturing, common component'], ['business', 'Mainland excl. government'], ['mainland', 'Mainland Norway'], ['total', 'Total economy'], ['oilgas', 'Oil and gas'],
                   ['construction', 'Construction'], ['trade', 'Trade'], ['transport', 'Transport'], ['accommodation', 'Accommodation and food'], ['ict', 'Information and communication'],
                   ['finance', 'Finance'], ['professional', 'Professional services']]
-                .map(([k, t]) => ({ s: `${g}_${k}`, short: t, tip: `${g === 'gross' ? 'Gross' : 'Net'}, ${t}`, avgFrom: k === 'pc' ? `${g}_mfg` : null, kind: 'line', on: k === 'mfg', group: g === 'gross' ? 'Gross labor share' : 'Net labor share' }))),
+                .filter(([k]) => k !== 'pc' || g === 'gross' || g === 'net')
+                .map(([k, t]) => ({ s: `${g}_${k}`, short: t, tip: `${tipWord}, ${t}`, avgFrom: k === 'pc' ? `${g}_mfg` : null, kind: 'line', on: k === 'mfg' && (g === 'gross' || g === 'net'), group }))),
       defaultYears: 30, showMethod: true, avgYears: 30,
     },
     {
@@ -795,7 +798,8 @@
     if (state.def.avgYears) {
       datasets.forEach((d) => {
         if (d.v.kind !== 'line' || d.s.projection) return;
-        const obs = d.s.periods.map((p, i) => [p, d.s.values[i]]).filter(([, v]) => v != null).slice(-state.def.avgYears);
+        const perYear = d.s.freq === 'Q' ? 4 : d.s.freq === 'M' ? 12 : 1;   // avgYears counts years whatever the frequency
+        const obs = d.s.periods.map((p, i) => [p, d.s.values[i]]).filter(([, v]) => v != null).slice(-state.def.avgYears * perYear);
         if (obs.length < 2) return;
         // avgFrom: the line is drawn at another series' average (the common component is centered on the manufacturing share's average)
         const ref = d.v.avgFrom && state.ind.series[d.v.avgFrom];

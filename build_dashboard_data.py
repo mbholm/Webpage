@@ -872,8 +872,44 @@ def mfg_common_component() -> dict:
     return out
 
 
+def quarterly_labor_shares() -> tuple[dict, list]:
+    """Quarterly labor shares: compensation of employees (09175) over value added at basic prices in current prices (09171), by industry.
+    SSB has no quarterly consumption of fixed capital or operating surplus by industry, so the quarterly share is the share of value
+    added, whose denominator also holds other taxes less subsidies on production (which makes it a little higher than the annual gross
+    share). The figures are not seasonally adjusted, so the quarters have a seasonal pattern; the four-quarter moving share divides
+    the sum of the last four quarters of compensation by the sum of the last four quarters of value added."""
+    codes = list(NA_INDUSTRIES) + [NA_GOVERNMENT]
+    pw, sw, mw = ssb_series(ssb_data("09175", [("NACE", codes), ("ContentsCode", ["LKostnader"]), ("Tid", ["from(1995K1)"])]))
+    pv, sv, mv = ssb_series(ssb_data("09171", [("NACE", codes), ("ContentsCode", ["BNPB"]), ("Tid", ["from(1995K1)"])]))
+    periods = [p for p in pw if p in set(pv)]
+    W = {c: dict(zip(pw, sw[(c, "LKostnader")])) for c in codes}
+    V = {c: dict(zip(pv, sv[(c, "BNPB")])) for c in codes}
+    items = [(k, lab, code, None) for code, (k, lab) in NA_INDUSTRIES.items()]
+    items.insert(2, ("business", "Mainland Norway excl. general government", "nr23_6fn", NA_GOVERNMENT))
+    series = {}
+    for k, lab, code, minus in items:
+        def part(d, p):
+            a, b = d[code].get(p), (d[minus].get(p) if minus else 0)
+            return None if a is None or b is None else a - b
+        w = [part(W, p) for p in periods]
+        v = [part(V, p) for p in periods]
+        share = [round(100 * a / b, 1) if a is not None and b else None for a, b in zip(w, v)]
+        moving = []
+        for i in range(len(periods)):
+            ws, vs = w[max(0, i - 3):i + 1], v[max(0, i - 3):i + 1]
+            ok = i >= 3 and None not in ws and None not in vs and sum(vs) > 0
+            moving.append(round(100 * sum(ws) / sum(vs), 1) if ok else None)
+        series[f"q4_{k}"] = S(f"Labor share of value added, four-quarter moving, {lab}", "percent", "Q", periods, moving, 1, derived=True)
+        series[f"q_{k}"] = S(f"Labor share of value added, quarterly, {lab}", "percent", "Q", periods, share, 1, derived=True)
+    return series, [src("Statistics Norway, wages and employment by industry, quarterly national accounts", "09175", "https://www.ssb.no/en/statbank/table/09175", mw["updated"],
+                        "Compensation of employees, not seasonally adjusted."),
+                    src("Statistics Norway, production account and income generation by industry, quarterly national accounts", "09171", "https://www.ssb.no/en/statbank/table/09171", mv["updated"],
+                        "Value added at basic prices, current prices, not seasonally adjusted.")]
+
+
 def ind_labor_shares() -> dict:
     _, _, mn = na_income()
+    quarterly, q_sources = quarterly_labor_shares()
     shares = [(k, lab, labor_shares(code)) for code, (k, lab) in NA_INDUSTRIES.items()]
     shares.insert(2, ("business", "Mainland Norway excl. general government", labor_shares("nr23_6fn", minus=NA_GOVERNMENT)))
     cc = mfg_common_component()
@@ -902,6 +938,7 @@ def ind_labor_shares() -> dict:
     for k, lab, (years, gross, net) in shares:
         series[f"net_{k}"] = S(f"Net labor share, {lab}", "percent", "A", years, net, 1, derived=True)
     series["net_pc"] = S("Net labor share, manufacturing, common component across sectors", "percent", "A", cc["years"], recenter(cc["net_raw"], mfg_net), 1, derived=True, note=cc_note)
+    series.update(quarterly)
     return {"series": series,
             "method": ("Labor shares are computed from the national accounts in current prices. Gross labor share = compensation of employees / "
                        "(compensation of employees + consumption of fixed capital + net operating surplus). Net labor share = compensation of employees / "
@@ -911,8 +948,14 @@ def ind_labor_shares() -> dict:
                        "own aggregation) avoids this. The definitions follow Holm and Jasinski, «Lønnsandelen i industrien», Samfunnsøkonomen. "
                        "The common component for manufacturing is the first principal component of the sectoral labor shares from the same paper, "
                        f"computed in real time. In the latest estimation window it explains {cc['gross_explained']:.1f} percent of the variance of the gross shares "
-                       f"and {cc['net_explained']:.1f} percent of the net shares."),
-            "sources": [src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", mn["updated"])]}
+                       f"and {cc['net_explained']:.1f} percent of the net shares. "
+                       "The quarterly series are compensation of employees divided by value added at basic prices in current prices, from the quarterly "
+                       "national accounts. Statistics Norway publishes no quarterly consumption of fixed capital or operating surplus by industry, so this is "
+                       "the labor share of value added: its denominator also includes other taxes less subsidies on production, which makes it one to three "
+                       "percentage points higher than the annual gross share, and there is no quarterly net share. The quarterly figures are not seasonally "
+                       "adjusted and have a clear seasonal pattern, so the four-quarter moving share, the sum of the last four quarters of compensation over "
+                       "the sum of the last four quarters of value added, is the better reading."),
+            "sources": [src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", mn["updated"])] + q_sources}
 
 
 def growth_accounting(Y: dict, L: dict, K: dict, SH: dict) -> dict:

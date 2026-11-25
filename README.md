@@ -163,7 +163,9 @@ The comparison blocks (`CMP_*` and `cmp_*` in the build script, `BLOCKS` and `co
 Method notes: TFP is computed in growth form (Törnqvist), weighting hours and capital by the labor
 share from the national accounts (table 09170), then cumulated into an index. Labor shares follow the
 definitions in «Lønnsandelen i industrien»: gross = W/(W + capital consumption + operating surplus),
-net = W/(W + operating surplus). The common component for manufacturing is a port of
+net = W/(W + operating surplus). The quarterly labor shares are compensation of employees (table 09175) over
+value added at basic prices in current prices (table 09171), since SSB publishes no quarterly capital consumption
+or operating surplus by industry, unadjusted and as a four-quarter moving share. The common component for manufacturing is a port of
 `pc1_expanding.m` from the paper's replication package and reproduces its published key numbers. Its level
 is set so that its average equals the 30-year average of the manufacturing share (the dashed line),
 which differs from the paper's centering by a constant only.
