@@ -39,6 +39,10 @@
   // ------------------------------------------------------------------ indicator definitions
   // headline: the series carried by the tile; goodUp: true/false colors the change as good/bad, null keeps it neutral
   // views: series offered in the detail chart; "on" marks the default selection; kind: line | bar; short: pill/legend label
+  // The eleven manufacturing sectors at the A38 level (keys as in MFG_SECTORS in the build script), short labels for pills and checkboxes
+  const MFG_SECTORS = [['food', 'Food, beverages and tobacco'], ['textiles', 'Textiles and apparel'], ['wood', 'Wood, paper and printing'], ['chemicals', 'Refined petroleum, chemicals and pharma'],
+                       ['minerals', 'Rubber, plastics and minerals'], ['metals', 'Basic and fabricated metals'], ['electronics', 'Computer and electronics'], ['electrical', 'Electrical equipment'],
+                       ['machinery', 'Machinery and equipment'], ['transport', 'Transport equipment, ships and platforms'], ['other', 'Furniture, other and repair']];
   const DEFS = [
     {
       id: 'gdp', title: 'GDP, Mainland Norway', kicker: 'Activity', goodUp: true,
@@ -225,6 +229,21 @@
                   ['finance', 'Finance'], ['professional', 'Professional services']]
                 .filter(([k]) => k !== 'pc' || g === 'gross' || g === 'net')
                 .map(([k, t]) => ({ s: `${g}_${k}`, short: t, tip: `${tipWord}, ${t}`, avgFrom: k === 'pc' ? `${g}_mfg` : null, kind: 'line', on: k === 'mfg' && (g === 'gross' || g === 'net'), group }))),
+      defaultYears: 30, showMethod: true, avgYears: 30,
+    },
+    {
+      id: 'mfg_labor_share', title: 'Manufacturing labor share', kicker: 'Income distribution', goodUp: null,
+      desc: 'The labor share in manufacturing on its own, from the annual national accounts. The gross labor share divides compensation of employees by factor income, that is compensation plus consumption of fixed capital plus net operating surplus. The net labor share leaves capital consumption out of the denominator. The income components show the three parts of factor income as shares of the total, and the sector series give the labor share of each of the eleven manufacturing industries at the A38 level. Below the chart you can leave out any sectors and see the labor share of the rest, with its average over a period of your choice. Dashed lines show each series’ average over the past 30 years.',
+      headline: { series: 'gross_mfg', fmt: (v) => fmt.pct(v), sub: 'gross labor share, manufacturing' },
+      secondary: [{ series: 'net_mfg', label: 'net', fmt: fmt.pct }],
+      spark: 'gross_mfg',
+      views: [{ s: 'gross_mfg', short: 'Gross labor share', kind: 'line', on: true, group: 'Manufacturing' }, { s: 'net_mfg', short: 'Net labor share', kind: 'line', on: true, group: 'Manufacturing' },
+              { s: 'comp_w', short: 'Compensation of employees', kind: 'line', group: 'Income components, share of factor income' }, { s: 'comp_dep', short: 'Consumption of fixed capital', kind: 'line', group: 'Income components, share of factor income' },
+              { s: 'comp_os', short: 'Net operating surplus', kind: 'line', group: 'Income components, share of factor income' },
+              ...[['gross', 'Gross labor share by sector', 'Gross'], ['net', 'Net labor share by sector', 'Net']].flatMap(([g, group, tipWord]) =>
+                MFG_SECTORS.map(([k, t]) => ({ s: `${g}_${k}`, short: t, tip: `${tipWord}, ${t}`, kind: 'line', group })))],
+      // the section below the chart: recompute the manufacturing share without the sectors the reader ticks (needs ind.components)
+      exclude: { title: 'Manufacturing excluding sectors of your choice', years: 30 },
       defaultYears: 30, showMethod: true, avgYears: 30,
     },
     {
@@ -527,14 +546,14 @@
   // ------------------------------------------------------------------ detail dialog
   const dlg = document.getElementById('detail');
   const inner = document.getElementById('d-inner');
-  let chart = null, chart2 = null, avgChart = null, bdCharts = [], state = null;
+  let chart = null, chart2 = null, avgChart = null, exChart = null, bdCharts = [], state = null;
 
   dlg.addEventListener('close', () => { destroyCharts(); if (location.hash) history.replaceState(null, '', location.pathname + location.search); });
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
   window.addEventListener('hashchange', openFromHash);
   // #id opens a tile; #id=seriesA,seriesB opens it with those series switched on
   function openFromHash() { const [id, keys] = location.hash.replace('#', '').split('='); if (id && DEFS.some((d) => d.id === id) && DATA) openDetail(id, true, keys ? keys.split(',') : null); }
-  function destroyCharts() { if (chart) { chart.destroy(); chart = null; } if (chart2) { chart2.destroy(); chart2 = null; } if (avgChart) { avgChart.destroy(); avgChart = null; } bdCharts.forEach((c) => c.destroy()); bdCharts = []; }
+  function destroyCharts() { if (chart) { chart.destroy(); chart = null; } if (chart2) { chart2.destroy(); chart2 = null; } if (avgChart) { avgChart.destroy(); avgChart = null; } if (exChart) { exChart.destroy(); exChart = null; } bdCharts.forEach((c) => c.destroy()); bdCharts = []; }
 
   function openDetail(id, fromHash, keys) {
     const def = DEFS.find((d) => d.id === id), ind = DATA.indicators[id];
@@ -546,7 +565,7 @@
     state = { def, ind, on, years: def.defaultYears || 10, table: false };
     inner.innerHTML = buildDetailHtml(def, ind);
     inner.querySelector('.d-close').addEventListener('click', () => dlg.close());
-    inner.querySelectorAll('[data-years]').forEach((b) => b.addEventListener('click', () => { state.years = +b.dataset.years; syncPills(); drawChart(); }));
+    inner.querySelectorAll('[data-years]').forEach((b) => b.addEventListener('click', () => { state.years = +b.dataset.years; syncPills(); drawChart(); if (state.ex) drawExclude(); }));
     inner.querySelectorAll('[data-series]').forEach((b) => b.addEventListener('click', () => toggleSeries(b.dataset.series)));
     inner.querySelector('[data-table]').addEventListener('click', () => { state.table = !state.table; syncPills(); drawTable(); });
     inner.querySelector('[data-csv]').addEventListener('click', downloadCsv);
@@ -556,6 +575,7 @@
     drawTable();
     if (def.second) drawSecond();
     if (def.averages) initAverages();
+    if (def.exclude && ind.components) initExclude();
     if (ind.breakdowns) drawBreakdowns(ind.breakdowns);
     if (ind.scatters) drawScatters(ind.scatters);
     dlg.scrollTop = 0;
@@ -644,6 +664,7 @@
         <p class="d-sub" id="d-avg-sub"></p>
         <div class="d-chart" id="d-avg-box"><canvas id="d-avg-canvas" role="img" aria-label="${def.averages.title}"></canvas></div>
       </div>` : ''}
+      ${def.exclude && ind.components ? excludeHtml(def, ind.components) : ''}
       ${def.second ? `<div class="d-second"><h3>${def.second.title}</h3><div class="d-chart"><canvas id="d-canvas2" role="img" aria-label="${def.second.title}"></canvas></div></div>` : ''}
       ${(ind.breakdowns || []).map((b, i) => `<div class="d-second"><h3>${b.title}</h3><p class="d-sub">${b.subtitle}</p><div class="d-chart" style="height:${b.items.length * (window.innerWidth < 700 ? 40 : 28) + 60}px"><canvas id="d-bd-${i}" role="img" aria-label="${b.title}"></canvas></div></div>`).join('')}
       ${(ind.scatters || []).map((b, i) => `<div class="d-second"><h3>${b.title}</h3><p class="d-sub">${b.subtitle}</p><div class="d-chart" style="height:440px"><canvas id="d-sc-${i}" role="img" aria-label="${b.title}"></canvas></div></div>`).join('')}
@@ -898,6 +919,112 @@
       },
       plugins: [endLabels],
     });
+  }
+
+  // Manufacturing labor share without the sectors the reader ticks (def.exclude, ind.components). The share is recomputed in the
+  // browser from the income components of the remaining sectors, either weighted (summed compensation over summed factor income,
+  // the labor share of manufacturing as if the excluded sectors did not exist) or as the unweighted mean of the sectors' shares.
+  // The same calculation over all sectors is the reference line, and both get their average over a period the reader chooses.
+  function excludeHtml(def, C) {
+    const li = C.years.length - 1 - [...C.total.w].reverse().findIndex((v) => v != null);   // latest year with figures
+    const tot = C.total.w[li] + C.total.dep[li] + C.total.os[li];
+    const box = (s) => {
+      const [, label] = MFG_SECTORS.find(([k]) => k === s.key) || [s.key, s.label];
+      const w = s.w[li] != null ? fmt.num((100 * (s.w[li] + s.dep[li] + s.os[li])) / tot, 0) + ' %' : '';
+      return `<label class="chk"><input type="checkbox" data-ex-sector="${s.key}">${label}${w ? `<span class="w">${w}</span>` : ''}</label>`;
+    };
+    return `<div class="d-second">
+        <h3>${def.exclude.title}</h3>
+        <p class="d-sub">Tick the sectors to leave out. The labor share of the remaining sectors is recomputed from their income components and drawn next to the same measure for all of manufacturing, with the average of both over the period you choose. The number after each sector is its share of manufacturing factor income in ${C.years[li]}.</p>
+        <div class="d-controls">
+          <div class="group ex-sectors"><span class="label">Leave out</span>${C.sectors.map(box).join('')}<button class="pill" type="button" data-ex-clear>Keep all</button></div>
+        </div>
+        <div class="d-controls">
+          <div class="group"><span class="label">Measure</span>${[['gross', 'Gross labor share'], ['net', 'Net labor share']].map(([k, t]) => `<button class="pill" type="button" data-ex-measure="${k}" aria-pressed="false">${t}</button>`).join('')}</div>
+          <div class="group"><span class="label">Aggregation</span>${[['weighted', 'Weighted by factor income'], ['mean', 'Unweighted mean of sectors']].map(([k, t]) => `<button class="pill" type="button" data-ex-agg="${k}" aria-pressed="false">${t}</button>`).join('')}</div>
+          <div class="group"><span class="label">Average over</span><label class="yr">From <select id="d-ex-from" aria-label="First year of the average"></select></label><label class="yr">to <select id="d-ex-to" aria-label="Last year of the average"></select></label>
+            ${[10, 20, 30, 0].map((n) => `<button class="pill" type="button" data-ex-last="${n}" aria-pressed="false">${n ? `Last ${n} y` : 'All years'}</button>`).join('')}</div>
+        </div>
+        <p class="d-sub" id="d-ex-sub"></p>
+        <div class="d-chart"><canvas id="d-ex-canvas" role="img" aria-label="${def.exclude.title}"></canvas></div>
+        <div class="d-legend" id="d-ex-legend"></div>
+      </div>`;
+  }
+  function initExclude() {
+    const C = state.ind.components, years = C.years.map(Number);
+    state.ex = { measure: 'gross', agg: 'weighted', out: new Set(), from: 0, to: 0 };
+    setExPeriod(state.def.exclude.years || 30);
+    ['from', 'to'].forEach((k) => { document.getElementById('d-ex-' + k).innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join(''); });
+    inner.querySelectorAll('[data-ex-measure]').forEach((b) => b.addEventListener('click', () => { state.ex.measure = b.dataset.exMeasure; drawExclude(); }));
+    inner.querySelectorAll('[data-ex-agg]').forEach((b) => b.addEventListener('click', () => { state.ex.agg = b.dataset.exAgg; drawExclude(); }));
+    inner.querySelectorAll('[data-ex-last]').forEach((b) => b.addEventListener('click', () => { setExPeriod(+b.dataset.exLast); drawExclude(); }));
+    ['from', 'to'].forEach((k) => document.getElementById('d-ex-' + k).addEventListener('change', (e) => { state.ex[k] = +e.target.value; setExPeriod(null); drawExclude(); }));
+    inner.querySelectorAll('[data-ex-sector]').forEach((c) => c.addEventListener('change', () => { if (c.checked) state.ex.out.add(c.dataset.exSector); else state.ex.out.delete(c.dataset.exSector); drawExclude(); }));
+    inner.querySelector('[data-ex-clear]').addEventListener('click', () => { state.ex.out.clear(); inner.querySelectorAll('[data-ex-sector]').forEach((c) => { c.checked = false; }); drawExclude(); });
+    drawExclude();
+  }
+  function setExPeriod(last) {   // last: number of years ending in the latest year, 0 for all years, null to keep the choice within the span
+    const ys = state.ind.components.years.map(Number), lo = ys[0], hi = ys[ys.length - 1], a = state.ex;
+    if (last != null) { a.to = hi; a.from = last ? Math.max(lo, hi - last + 1) : lo; }
+    a.from = Math.min(Math.max(a.from, lo), hi); a.to = Math.min(Math.max(a.to, lo), hi);
+    if (a.from > a.to) [a.from, a.to] = [a.to, a.from];
+  }
+  // The share for one set of sectors, year by year: null when a sector lacks figures or when no sector is left
+  function excludeShare(C, keep) {
+    const gross = state.ex.measure === 'gross';
+    return C.years.map((y, i) => {
+      const parts = keep.map((s) => [s.w[i], s.dep[i], s.os[i]]);
+      if (!parts.length || parts.some((p) => p.some((v) => v == null))) return null;
+      const den = ([w, d, o]) => (gross ? w + d + o : w + o);
+      if (state.ex.agg === 'weighted') { const D = parts.reduce((a, p) => a + den(p), 0); return D > 0 ? (100 * parts.reduce((a, p) => a + p[0], 0)) / D : null; }
+      const shares = parts.map((p) => (den(p) > 0 ? (100 * p[0]) / den(p) : null));
+      return shares.some((v) => v == null) ? null : shares.reduce((a, v) => a + v, 0) / shares.length;
+    });
+  }
+  function drawExclude() {
+    const C = state.ind.components, a = state.ex, ys = C.years.map(Number), hi = ys[ys.length - 1];
+    inner.querySelectorAll('[data-ex-measure]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.exMeasure === a.measure)));
+    inner.querySelectorAll('[data-ex-agg]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.exAgg === a.agg)));
+    inner.querySelectorAll('[data-ex-last]').forEach((b) => { const n = +b.dataset.exLast; b.setAttribute('aria-pressed', String(a.to === hi && a.from === (n ? Math.max(ys[0], hi - n + 1) : ys[0]))); });
+    ['from', 'to'].forEach((k) => { document.getElementById('d-ex-' + k).value = String(a[k]); });
+    const keep = C.sectors.filter((s) => !a.out.has(s.key)), out = C.sectors.filter((s) => a.out.has(s.key));
+    const names = out.map((s) => (MFG_SECTORS.find(([k]) => k === s.key) || [s.key, s.label])[1]);
+    const listed = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : names.join('');
+    const what = `${a.measure === 'gross' ? 'Gross' : 'Net'} labor share, ${a.agg === 'weighted' ? 'weighted by factor income' : 'unweighted mean of the sectors'}`;
+    const all = excludeShare(C, C.sectors), ex = excludeShare(C, keep);
+    const visible = C.years.map((y, i) => i).filter((i) => state.years >= 100 || ys[i] > hi - state.years);
+    const periods = visible.map((i) => C.years[i]);
+    const win = (i) => ys[i] >= a.from && ys[i] <= a.to;
+    const mean = (v) => { const xs = C.years.map((y, i) => (win(i) ? v[i] : null)).filter((x) => x != null); return xs.length ? { m: xs.reduce((s, x) => s + x, 0) / xs.length, n: xs.length } : null; };
+    const mAll = mean(all), mEx = mean(ex);
+    const span = a.from === a.to ? String(a.from) : `${a.from}–${a.to}`;
+    const li = C.years.length - 1 - [...all].reverse().findIndex((v) => v != null);
+    const tot = C.total.w[li] + C.total.dep[li] + C.total.os[li];
+    const outW = out.reduce((s, x) => s + (x.w[li] + x.dep[li] + x.os[li]), 0);
+    let sub;
+    if (!out.length) sub = `No sectors are left out, so the line is the ${what.toLowerCase()}, for all of manufacturing: ${fmt.pct(all[li])} in ${C.years[li]} and ${mAll ? fmt.pct(mAll.m) : '–'} on average over ${span}. Tick sectors above to leave them out.`;
+    else if (!keep.length) sub = 'Every sector is left out, so there is nothing left to compute.';
+    else sub = `${what}, excluding ${listed}: ${fmt.pct(ex[li])} in ${C.years[li]}, against ${fmt.pct(all[li])} for all of manufacturing. Average over ${span}: ${mEx ? fmt.pct(mEx.m) : '–'} excluding these sectors, against ${mAll ? fmt.pct(mAll.m) : '–'} for all of manufacturing. The excluded sectors held ${fmt.num((100 * outW) / tot, 0)} % of manufacturing factor income in ${C.years[li]}.`;
+    document.getElementById('d-ex-sub').textContent = sub;
+    const c1 = cssVar('--s1'), c2 = cssVar('--s2');
+    const line = (label, data, color, extra = {}) => ({ label, data, type: 'line', borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointHitRadius: 10, spanGaps: true, tension: 0.15, _dec: 1, _unit: '%', ...extra });
+    const dash = { borderWidth: 1.5, borderDash: [5, 4], order: 0 };
+    const ds = [line('All of manufacturing', visible.map((i) => (all[i] == null ? null : +all[i].toFixed(1))), c1, { order: 1 })];
+    if (mAll) ds.push(line(`All of manufacturing, average ${span}`, visible.map((i) => (win(i) ? +mAll.m.toFixed(1) : null)), c1, dash));
+    if (out.length && keep.length) {
+      ds.push(line(`Excluding ${out.length} sector${out.length > 1 ? 's' : ''}`, visible.map((i) => (ex[i] == null ? null : +ex[i].toFixed(1))), c2, { order: 1 }));
+      if (mEx) ds.push(line(`Excluding ${out.length} sector${out.length > 1 ? 's' : ''}, average ${span}`, visible.map((i) => (win(i) ? +mEx.m.toFixed(1) : null)), c2, dash));
+    }
+    const opts = baseOptions(periods, 'percent', { crosshair: {} });
+    if (exChart) exChart.destroy();
+    exChart = new Chart(document.getElementById('d-ex-canvas').getContext('2d'), { type: 'line', data: { labels: periods, datasets: ds }, options: opts, plugins: [crosshair] });
+    const sw = (color, dashed) => `<span class="sw line" style="background:${dashed ? `repeating-linear-gradient(90deg, ${color} 0 4px, transparent 4px 7px)` : color}"></span>`;
+    document.getElementById('d-ex-legend').innerHTML = [
+      `<span>${sw(c1)}${what}, all of manufacturing *</span>`,
+      mAll ? `<span>${sw(c1, true)}All of manufacturing: average ${span}, ${fmt.pct(mAll.m)}</span>` : '',
+      out.length && keep.length ? `<span>${sw(c2)}Excluding ${listed} *</span>` : '',
+      out.length && keep.length && mEx ? `<span>${sw(c2, true)}Excluding these sectors: average ${span}, ${fmt.pct(mEx.m)}</span>` : '',
+    ].join('');
   }
 
   // Horizontal bar charts for one-year breakdowns (ind.breakdowns): items sorted by size, value written at the end of each bar

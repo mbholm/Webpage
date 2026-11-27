@@ -62,7 +62,7 @@ This compiles it with pdflatex and copies the result to `files/Holm_CV.pdf`, whi
 
 A one-page dashboard of Norwegian macro indicators (GDP, consumption, investment, inflation, unemployment, employment, labor market tightness, interest
 rates, the krone, trade balance, current account, the oil fund, the government budget, house prices, credit, inequality,
-productivity, wages and labor shares), followed by two blocks that compare Norway with the Nordic countries and with Europe
+productivity, wages, labor shares and the manufacturing labor share), followed by two blocks that compare Norway with the Nordic countries and with Europe
 and the US (GDP, inflation, interest rates, unemployment, employment, wages and productivity in each). Three files:
 
 - `build_dashboard_data.py` fetches every series from Statistics Norway (PxWebApi v2), Norges Bank
@@ -168,7 +168,10 @@ value added at basic prices in current prices (table 09171), since SSB publishes
 or operating surplus by industry, unadjusted and as a four-quarter moving share. The common component for manufacturing is a port of
 `pc1_expanding.m` from the paper's replication package and reproduces its published key numbers. Its level
 is set so that its average equals the 30-year average of the manufacturing share (the dashed line),
-which differs from the paper's centering by a constant only.
+which differs from the paper's centering by a constant only. The manufacturing labor share tile holds the
+same share on its own, its income components, the eleven A38 manufacturing sectors, and the raw income components
+by sector (`components` in the JSON) from which the page recomputes the share without the sectors the reader ticks,
+weighted by factor income or as the unweighted mean of the sectors, with its average over a chosen period.
 
 A tile can be linked directly: `dashboard.html#inflation` opens it, and
 `dashboard.html#oil_fund=costs` opens it with the named series switched on.

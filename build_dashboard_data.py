@@ -872,6 +872,68 @@ def mfg_common_component() -> dict:
     return out
 
 
+MFG_SECTORS = {   # the same eleven A38 manufacturing sectors as MFG_A38: SSB code: (key, label)
+    "A38NP2X10_12": ("food", "Food products, beverages and tobacco"),
+    "A38NP2X13_15": ("textiles", "Textiles, wearing apparel and leather"),
+    "A38NP2X16_18": ("wood", "Wood and paper products, printing"),
+    "A38NP2X19_21": ("chemicals", "Refined petroleum, chemical and pharmaceutical products"),
+    "A38NP2X22_23": ("minerals", "Rubber, plastic and non-metallic mineral products"),
+    "A38NP2X24_25": ("metals", "Basic metals and fabricated metal products"),
+    "A38NP2X26": ("electronics", "Computer, electronic and optical products"),
+    "A38NP2X27": ("electrical", "Electrical equipment"),
+    "A38NP2X28": ("machinery", "Machinery and equipment n.e.c."),
+    "A38NP2X29_30": ("transport", "Transport equipment incl. ships and oil platforms"),
+    "A38NP2X31_33": ("other", "Furniture, other manufacturing, repair and installation"),
+}
+
+
+def ind_mfg_labor_share() -> dict:
+    """Manufacturing labor share on its own: the aggregate, its income components, the eleven A38 sectors, and the raw income
+    components by sector so that the page can recompute the manufacturing share with any sectors left out."""
+    codes = ["nr23ind"] + list(MFG_SECTORS)
+    years, s, meta = ssb_series(ssb_data("09170", [("NACE", codes), ("ContentsCode", ["LOKO", "DEP", "DRI"]), ("Tid", ["from(1970)"])]))
+
+    def parts(code):
+        return [s[(code, c)] for c in ("LOKO", "DEP", "DRI")]
+
+    def shares(W, D, O):
+        gross, net = [], []
+        for w, d, o in zip(W, D, O):
+            ok = None not in (w, d, o) and (w + d + o) > 0
+            gross.append(round(100 * w / (w + d + o), 1) if ok else None)
+            net.append(round(100 * w / (w + o), 1) if ok and (w + o) > 0 else None)
+        return gross, net
+
+    series = {}
+    W, D, O = parts("nr23ind")
+    gross, net = shares(W, D, O)
+    series["gross_mfg"] = S("Gross labor share, manufacturing", "percent", "A", years, gross, 1, derived=True)
+    series["net_mfg"] = S("Net labor share, manufacturing", "percent", "A", years, net, 1, derived=True)
+    for key, lab, X in (("comp_w", "Compensation of employees", W), ("comp_dep", "Consumption of fixed capital", D), ("comp_os", "Net operating surplus", O)):
+        vals = [round(100 * x / (w + d + o), 1) if None not in (x, w, d, o) and (w + d + o) > 0 else None for x, w, d, o in zip(X, W, D, O)]
+        series[key] = S(f"{lab}, share of factor income, manufacturing", "percent", "A", years, vals, 1, derived=True)
+    sectors = []
+    for code, (k, lab) in MFG_SECTORS.items():
+        Wk, Dk, Ok = parts(code)
+        g, n = shares(Wk, Dk, Ok)
+        series[f"gross_{k}"] = S(f"Gross labor share, {lab}", "percent", "A", years, g, 1, derived=True)
+        series[f"net_{k}"] = S(f"Net labor share, {lab}", "percent", "A", years, n, 1, derived=True)
+        sectors.append({"key": k, "label": lab, "code": code, "w": Wk, "dep": Dk, "os": Ok})
+    components = {"years": years, "unit": "NOK million, current prices", "total": {"w": W, "dep": D, "os": O}, "sectors": sectors}
+    return {"series": series, "components": components,
+            "method": ("Labor shares are computed from the national accounts in current prices, as in the labor shares tile: gross labor share = "
+                       "compensation of employees / (compensation of employees + consumption of fixed capital + net operating surplus), net labor share = "
+                       "compensation of employees / (compensation of employees + net operating surplus). The income components are the three parts of "
+                       "factor income as shares of their sum, so compensation of employees equals the gross labor share and the three add up to 100 percent. "
+                       "The sectors are the eleven manufacturing industries at the A38 level of the national accounts, the same sectors as behind the common "
+                       "component in the labor shares tile. The share excluding sectors of your choice is recomputed in the browser from the income components "
+                       "of the remaining sectors: the weighted share divides their summed compensation by their summed factor income (gross) or by summed "
+                       "compensation plus net operating surplus (net), which is the labor share of manufacturing as if the excluded sectors did not exist. "
+                       "The unweighted mean is the simple average of the remaining sectors' labor shares, where a small sector counts as much as a large one. "
+                       "Net labor shares of single sectors can exceed 100 percent in years with a negative net operating surplus."),
+            "sources": [src("Statistics Norway, production account and income generation by industry", "09170", "https://www.ssb.no/en/statbank/table/09170", meta["updated"])]}
+
+
 def quarterly_labor_shares() -> tuple[dict, list]:
     """Quarterly labor shares: compensation of employees (09175) over value added at basic prices in current prices (09171), by industry.
     SSB has no quarterly consumption of fixed capital or operating surplus by industry, so the quarterly share is the share of value
@@ -1993,6 +2055,7 @@ def main() -> int:
     run("productivity", ind_productivity)
     run("wages", ind_wages)
     run("labor_shares", ind_labor_shares)
+    run("mfg_labor_share", ind_mfg_labor_share)
     run("inequality", ind_inequality, previous.get("inequality"))
     for block in CMP_BLOCKS:   # Norway against the Nordic countries and against European countries
         run(f"{block}_gdp", cmp_gdp, block, indicators.get("gdp"), previous.get(f"{block}_gdp"))
